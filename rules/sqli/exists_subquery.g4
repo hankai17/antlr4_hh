@@ -1,8 +1,16 @@
-// EXISTS / NOT EXISTS 子查询结构检测。
-rule exists_subquery {
-    severity: MEDIUM
-    action: ALLOW
-    description: "EXISTS 子查询结构检测"
-    pattern: UnaryExpr(op = "EXISTS")
-    pattern: UnaryExpr(op = "NOT EXISTS")
-}
+// rule: exists_subquery
+// severity: MEDIUM
+// action: ALLOW
+// description: EXISTS 子查询结构检测
+// profile: sql
+
+parser grammar exists_subquery;
+
+options { tokenVocab = SQLTokens; }
+
+import SQLExpr;
+
+pattern
+    : EXISTS LPAREN select_stmt RPAREN
+    | NOT EXISTS LPAREN select_stmt RPAREN
+    ;

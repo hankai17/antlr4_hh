@@ -1,6 +1,13 @@
-// SQLi：UNION SELECT 联合查询注入
-rule union_select {
-    severity: CRITICAL
-    description: "UNION SELECT 联合查询"
-    pattern: Query(union = true)
-}
+// rule: union_select
+// severity: CRITICAL
+// action: BLOCK
+// description: UNION SELECT 联合查询
+// profile: sql
+
+parser grammar union_select;
+
+options { tokenVocab = SQLTokens; }
+
+import SQLExpr;
+
+pattern : UNION ALL? SELECT expr_list? ;

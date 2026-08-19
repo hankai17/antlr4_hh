@@ -1,8 +1,13 @@
-// BETWEEN / NOT BETWEEN 表达式结构检测。
-rule between_expr {
-    severity: LOW
-    action: ALLOW
-    description: "BETWEEN 表达式结构检测"
-    pattern: BinaryExpr(op = "BETWEEN")
-    pattern: BinaryExpr(op = "NOT BETWEEN")
-}
+// rule: between_expr
+// severity: LOW
+// action: ALLOW
+// description: BETWEEN 表达式结构检测
+// profile: sql
+
+parser grammar between_expr;
+
+options { tokenVocab = SQLTokens; }
+
+import SQLExpr;
+
+pattern : add_expr NOT? BETWEEN add_expr AND add_expr ;

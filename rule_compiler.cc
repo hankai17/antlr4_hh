@@ -1,239 +1,95 @@
 // ============================================================
-// rulec — WAF 规则编译器
+// rulec — WAF 规则编译器（ANTLR 语法规则）
 // ------------------------------------------------------------
-// 输入：rules/xxx.g4（Rule.g4 规则语言）
-// 输出：C++ 检测插件源码 + lib<name>_rule.so
+// 输入：rules/**/*.g4（标准 ANTLR parser grammar + 元数据注释）
+// 输出：lib<name>_rule.so（独立插件，导出 waf_rule_check_text）
 //
 // 流水线：
-//   Rule.g4 规则  --RuleParser-->  规则 AST  --codegen-->  plugin.cc
-//                                                       --g++ -shared-->
-//                                                       lib<name>_rule.so
+//   rules/sqli/sleep.g4（ANTLR 语法，import SQLExpr）
+//     --java--> sleep.{h,cpp}（规则解析器）
+//     + wrapper + 共享词法 SQLTokens
+//     --g++ -shared--> libsleep_rule.so
 //
-// 生成的插件只依赖 ast.h / rule_plugin.h，不依赖 ANTLR 运行时，
-// 因此 .so 可以独立分发、热加载。
+// 插件只依赖 rule_plugin.h 与 ANTLR 运行时，可独立分发、热加载。
 // ============================================================
 
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <map>
-#include <memory>
-#include <set>
 #include <sstream>
 #include <string>
-#include <vector>
-
-#include "antlr4-runtime.h"
-#include "RuleLexer.h"
-#include "RuleParser.h"
-
-using namespace antlr4;
 
 namespace {
 
 // ------------------------------------------------------------
-// 规则 AST（从 Rule.g4 解析树折叠而来）
+// 规则元数据（文件头注释：// rule: / // severity: / ...）
 // ------------------------------------------------------------
 
-struct Pattern;
-
-struct PatternArg {
-    std::string name;              // 属性名 / 语义角色
-    std::string value;             // 标量值（等值或 contains）
-    bool isContains = false;       // contains 谓词
-    std::unique_ptr<Pattern> nested;     // 嵌套子模式
-    // 属性路径等值：left.value = right.value（两个节点属性相等）
-    bool isPathEq = false;
-    std::string pathLhsRole, pathLhsAttr;
-    std::string pathRhsRole, pathRhsAttr;
-};
-
-struct Pattern {
-    std::string kind;
-    std::vector<std::unique_ptr<PatternArg>> args;
-};
-
-struct RuleDef {
+struct RuleMeta {
     std::string name;
     std::string severity = "MEDIUM";
     std::string action = "BLOCK";
-    std::string profile = "sql";
     std::string description;
-    std::vector<std::unique_ptr<Pattern>> patterns;  // 多个 pattern = 或（OR）
+    std::string profile = "sql";
 };
 
-std::string unescapeString(const std::string& token) {
-    if (token.size() >= 2 && token.front() == '"' && token.back() == '"') {
-        std::string s = token.substr(1, token.size() - 2);
-        std::string out;
-        for (size_t i = 0; i < s.size(); ++i) {
-            if (s[i] == '\\' && i + 1 < s.size()) {
-                switch (s[i + 1]) {
-                    case 'n': out += '\n'; ++i; break;
-                    case 't': out += '\t'; ++i; break;
-                    case 'r': out += '\r'; ++i; break;
-                    case '"': out += '"'; ++i; break;
-                    case '\\': out += '\\'; ++i; break;
-                    default: out += s[i]; break;
-                }
-            } else {
-                out += s[i];
-            }
-        }
-        return out;
-    }
-    return token;
-}
-
-std::string lower(std::string s) {
-    for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    return s;
-}
-
-// 已知 AST 节点类型（供校验告警）。
-const std::set<std::string> kKnownKinds = {
-    "Query", "Select", "SelectItem", "From", "TableRef",
-    "Where", "GroupBy", "Having", "OrderBy", "OrderItem", "Limit",
-    "BinaryExpr", "UnaryExpr", "Constant", "ColumnRef", "FunctionCall",
-    "List", "CaseExpr", "WhenClause", "Text",
-    // 片段解析器节点
-    "Stacked", "StmtInsert", "StmtUpdate", "StmtDelete",
-};
-
-std::unique_ptr<PatternArg> convertArg(RuleParser::PatternArgContext* ctx) {
-    auto arg = std::make_unique<PatternArg>();
-
-    // left.value = right.value
-    if (ctx->DOT().size() == 2) {
-        arg->isPathEq = true;
-        arg->pathLhsRole = ctx->IDENT(0)->getText();
-        arg->pathLhsAttr = ctx->IDENT(1)->getText();
-        arg->pathRhsRole = ctx->IDENT(2)->getText();
-        arg->pathRhsAttr = ctx->IDENT(3)->getText();
-        return arg;
-    }
-
-    arg->name = ctx->IDENT(0)->getText();
-    if (ctx->STRING()) {
-        arg->value = unescapeString(ctx->STRING()->getText());
-        arg->isContains = (arg->name == "contains");
-    } else if (ctx->BOOL()) {
-        arg->value = ctx->BOOL()->getText();
-    } else if (ctx->nodePattern()) {
-        auto nested = std::make_unique<PatternArg>();
-        nested->name = arg->name;  // 语义角色
-        auto pat = std::make_unique<Pattern>();
-        pat->kind = ctx->nodePattern()->IDENT()->getText();
-        if (ctx->nodePattern()->patternArgList()) {
-            for (auto* a : ctx->nodePattern()->patternArgList()->patternArg()) {
-                pat->args.push_back(convertArg(a));
-            }
-        }
-        nested->nested = std::move(pat);
-        return nested;
-    }
-    return arg;
-}
-
-RuleDef parseRuleFile(const std::string& path) {
+bool isAntlrGrammar(const std::string& path) {
     std::ifstream in(path);
-    if (!in) {
-        throw std::runtime_error("cannot open rule file: " + path);
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.find("grammar ") != std::string::npos) return true;
     }
-    std::stringstream ss;
-    ss << in.rdbuf();
+    return false;
+}
 
-    ANTLRInputStream input(ss.str());
-    RuleLexer lexer(&input);
-    CommonTokenStream tokens(&lexer);
-    RuleParser parser(&tokens);
+std::string baseName(const std::string& path) {
+    size_t slash = path.find_last_of('/');
+    std::string b = slash == std::string::npos ? path : path.substr(slash + 1);
+    size_t dot = b.rfind(".g4");
+    if (dot != std::string::npos) b = b.substr(0, dot);
+    return b;
+}
 
-    lexer.removeErrorListeners();
-    parser.removeErrorListeners();
-
-    RuleParser::RuleFileContext* tree = parser.ruleFile();
-    if (parser.getNumberOfSyntaxErrors() > 0) {
-        throw std::runtime_error("rule file has syntax errors: " + path);
-    }
-    if (tree->ruleDef().empty()) {
-        throw std::runtime_error("no rule defined in: " + path);
-    }
-
-    RuleParser::RuleDefContext* def = tree->ruleDef(0);
-    RuleDef rule;
-    rule.name = def->IDENT()->getText();
-
-    for (auto* p : def->property()) {
-        if (p->SEVERITY()) rule.severity = p->SEVERITY()->getText();
-        else if (p->ACTION()) rule.action = p->ACTION()->getText();
-        else if (p->PROFILE()) rule.profile = lower(p->PROFILE()->getText());
-        else if (p->STRING()) rule.description = unescapeString(p->STRING()->getText());
-    }
-
-    for (auto* pd : def->patternDef()) {
-        RuleParser::NodePatternContext* pat = pd->nodePattern();
-        auto p = std::make_unique<Pattern>();
-        p->kind = pat->IDENT()->getText();
-        if (pat->patternArgList()) {
-            for (auto* a : pat->patternArgList()->patternArg()) {
-                p->args.push_back(convertArg(a));
+RuleMeta parseMeta(const std::string& path) {
+    RuleMeta m;
+    m.name = baseName(path);
+    std::ifstream in(path);
+    std::string line;
+    while (std::getline(in, line)) {
+        auto keyval = [&](const std::string& key, std::string* dst) {
+            std::string prefix = "// " + key + ": ";
+            size_t p = line.find(prefix);
+            if (p != std::string::npos) {
+                *dst = line.substr(p + prefix.size());
+                if (!dst->empty() && dst->back() == '\r') dst->pop_back();
+                return true;
             }
-        }
-        if (!kKnownKinds.count(p->kind)) {
-            std::cerr << "warning: unknown pattern kind '" << p->kind
-                      << "' (known: Query/Select/BinaryExpr/...)" << std::endl;
-        }
-        rule.patterns.push_back(std::move(p));
+            return false;
+        };
+        keyval("rule", &m.name);
+        keyval("severity", &m.severity);
+        keyval("action", &m.action);
+        keyval("description", &m.description);
+        keyval("profile", &m.profile);
     }
-    return rule;
+    return m;
 }
 
 // ------------------------------------------------------------
-// 代码生成
+// 工具
 // ------------------------------------------------------------
 
-struct CodegenContext {
-    int nextId = 0;
-    std::ostringstream decls;   // 前置声明
-    std::ostringstream bodies;  // 函数定义
-};
+bool fileExists(const std::string& p) {
+    std::error_code ec;
+    return std::filesystem::exists(p, ec);
+}
 
-int emitPattern(CodegenContext& cg, const Pattern& pat) {
-    int id = cg.nextId++;
-
-    std::ostringstream body;
-    body << "static bool m" << id << "(const waf::AstNode& n) {\n";
-    body << "    if (n.kind != \"" << pat.kind << "\") return false;\n";
-
-    for (const auto& arg : pat.args) {
-        if (arg->nested) {
-            int nestedId = emitPattern(cg, *arg->nested);
-            body << "    {\n"
-                 << "        const waf::AstNode* c = n.namedChild(\"" << arg->name << "\");\n"
-                 << "        if (!c || !m" << nestedId << "(*c)) return false;\n"
-                 << "    }\n";
-        } else if (arg->isContains) {
-            body << "    {\n"
-                 << "        const std::string& v = n.attr(\"value\");\n"
-                 << "        if (v.find(\"" << arg->value << "\") == std::string::npos) return false;\n"
-                 << "    }\n";
-    } else if (arg->isPathEq) {
-        body << "    {\n"
-             << "        const waf::AstNode* l = n.namedChild(\"" << arg->pathLhsRole << "\");\n"
-             << "        const waf::AstNode* r = n.namedChild(\"" << arg->pathRhsRole << "\");\n"
-             << "        if (!l || !r) return false;\n"
-             << "        if (l->attr(\"" << arg->pathLhsAttr << "\") != r->attr(\"" << arg->pathRhsAttr << "\")) return false;\n"
-             << "    }\n";
-    } else {
-            body << "    if (n.attr(\"" << arg->name << "\") != \"" << arg->value << "\") return false;\n";
-    }
-    }
-    body << "    return true;\n"
-         << "}\n\n";
-
-    cg.decls << "static bool m" << id << "(const waf::AstNode& n);\n";
-    cg.bodies << body.str();
-    return id;
+bool writeFile(const std::string& path, const std::string& content) {
+    std::ofstream out(path);
+    if (!out) return false;
+    out << content;
+    return out.good();
 }
 
 std::string cppEscape(const std::string& s) {
@@ -251,52 +107,126 @@ std::string cppEscape(const std::string& s) {
     return out;
 }
 
-std::string generatePlugin(const RuleDef& rule) {
-    CodegenContext cg;
-    std::vector<int> topIds;
-    for (const auto& p : rule.patterns) {
-        topIds.push_back(emitPattern(cg, *p));
-    }
+// ------------------------------------------------------------
+// ANTLR 编译流水线
+// ------------------------------------------------------------
 
+// 生成共享词法（幂等）：ANTLR 会把输出镜像到源文件相对路径，需 cd 到目标目录
+bool ensureSharedLexer(const std::string& sharedOut, const std::string& sharedSrc,
+                       const std::string& jar) {
+    if (fileExists(sharedOut + "/SQLTokens.cpp")) return true;
+    std::error_code ec;
+    std::filesystem::create_directories(sharedOut, ec);
+    // import 解析需要 SQLExpr.g4 与 tokenVocab 的 SQLTokens.tokens 在同一目录
+    std::filesystem::copy_file(sharedSrc + "/SQLExpr.g4", sharedOut + "/SQLExpr.g4",
+                               std::filesystem::copy_options::overwrite_existing, ec);
+    auto cwd = std::filesystem::current_path();
+    std::filesystem::current_path(sharedOut);
+    std::string cmd = "java -jar " + jar + " -Dlanguage=Cpp -no-listener -o . " +
+                      sharedSrc + "/SQLTokens.g4";
+    int rc = std::system(cmd.c_str());
+    std::filesystem::current_path(cwd);
+    return rc == 0;
+}
+
+std::string generateWrapper(const RuleMeta& m, const std::string& cls) {
     std::ostringstream out;
-    out << "// Generated by rulec from rule file. DO NOT EDIT.\n"
+    out << "// Generated by rulec from ANTLR rule grammar. DO NOT EDIT.\n"
         << "#include \"rule_plugin.h\"\n"
-        << "#include <string>\n\n"
-        << cg.decls.str() << "\n"
-        << cg.bodies.str()
+        << "#include \"antlr4-runtime.h\"\n"
+        << "#include \"SQLTokens.h\"\n"
+        << "#include \"" << cls << ".h\"\n"
+        << "#include <memory>\n"
+        << "#include <string>\n"
+        << "#include <vector>\n\n"
+        << "using namespace antlr4;\n\n"
         << "extern \"C\" int waf_rule_abi() { return waf::WAF_RULE_ABI; }\n\n"
         << "extern \"C\" const waf::RuleInfo* waf_rule_info() {\n"
         << "    static const waf::RuleInfo info = {\n"
-        << "        \"" << cppEscape(rule.name) << "\",\n"
-        << "        \"" << rule.severity << "\",\n"
-        << "        \"" << rule.action << "\",\n"
-        << "        \"" << cppEscape(rule.description) << "\",\n"
-        << "        \"" << rule.profile << "\"\n"
+        << "        \"" << cppEscape(m.name) << "\",\n"
+        << "        \"" << m.severity << "\",\n"
+        << "        \"" << m.action << "\",\n"
+        << "        \"" << cppEscape(m.description) << "\",\n"
+        << "        \"" << m.profile << "\"\n"
         << "    };\n"
         << "    return &info;\n"
         << "}\n\n"
-        << "extern \"C\" bool waf_rule_check(const waf::AstNode& root) {\n"
-        << "    return waf::matchAny(root, m" << topIds[0] << ")";
-    for (size_t i = 1; i < topIds.size(); ++i) {
-        out << "\n        || waf::matchAny(root, m" << topIds[i] << ")";
-    }
-    out << ";\n"
+        << "extern \"C\" bool waf_rule_check_text(const char* text) {\n"
+        << "    ANTLRInputStream input(text ? text : \"\");\n"
+        << "    SQLTokens lexer(&input);\n"
+        << "    lexer.removeErrorListeners();\n"
+        << "    CommonTokenStream tokens(&lexer);\n"
+        << "    tokens.fill();\n"
+        << "    std::vector<Token*> visible;\n"
+        << "    for (size_t i = 0; i < tokens.size(); ++i) {\n"
+        << "        Token* t = tokens.get(i);\n"
+        << "        if (t->getType() == Token::EOF) break;\n"
+        << "        if (t->getChannel() == Token::DEFAULT_CHANNEL) visible.push_back(t);\n"
+        << "    }\n"
+        << "    for (size_t i = 0; i < visible.size(); ++i) {\n"
+        << "        tokens.seek(visible[i]->getTokenIndex());\n"
+        << "        " << cls << " parser(&tokens);\n"
+        << "        parser.removeErrorListeners();\n"
+        << "        parser.setErrorHandler(std::make_shared<BailErrorStrategy>());\n"
+        << "        try {\n"
+        << "            parser.pattern();\n"
+        << "            return true;\n"
+        << "        } catch (...) {\n"
+        << "        }\n"
+        << "    }\n"
+        << "    return false;\n"
         << "}\n";
     return out.str();
 }
 
-bool writeFile(const std::string& path, const std::string& content) {
-    std::ofstream out(path);
-    if (!out) return false;
-    out << content;
-    return out.good();
-}
+int compileAntlrRule(const RuleMeta& meta, const std::string& ruleFile,
+                     const std::string& outDir, const std::string& includeDir,
+                     const std::string& sharedSrc, const std::string& jar,
+                     const std::string& antlrInc, const std::string& antlrLib) {
+    const std::string cls = baseName(ruleFile);
+    const std::string absOut = std::filesystem::absolute(outDir).string();
+    const std::string genDir = absOut + "/gen";
+    const std::string sharedOut = genDir + "/_shared";
+    std::error_code ec;
+    std::filesystem::create_directories(genDir, ec);
 
-int run(const std::string& gxx, const std::string& includeDir,
-        const std::string& ccFile, const std::string& soFile) {
-    std::string cmd = gxx + " -std=c++17 -O2 -fPIC -shared -I" + includeDir +
-                      " -o " + soFile + " " + ccFile;
-    return std::system(cmd.c_str());
+    if (!ensureSharedLexer(sharedOut, sharedSrc, jar)) {
+        std::cerr << "[rulec] shared lexer generation failed\n";
+        return 1;
+    }
+
+    // 1) 生成规则解析器（cd 到规则目录避免 ANTLR 镜像输出路径）
+    std::string ruleDir = std::filesystem::path(ruleFile).parent_path().string();
+    auto cwd = std::filesystem::current_path();
+    std::filesystem::current_path(ruleDir);
+    std::string cmd = "java -jar " + jar + " -Dlanguage=Cpp -no-listener -lib " +
+                      sharedOut + " -o " + genDir + " " + cls + ".g4";
+    int rc = std::system(cmd.c_str());
+    std::filesystem::current_path(cwd);
+    if (rc != 0 || !fileExists(genDir + "/" + cls + ".cpp")) {
+        std::cerr << "[rulec] ANTLR generation failed for " << ruleFile << "\n";
+        return 1;
+    }
+
+    // 2) 生成插件 wrapper
+    std::string wrapperPath = genDir + "/" + cls + "_rule.cc";
+    if (!writeFile(wrapperPath, generateWrapper(meta, cls))) return 1;
+
+    // 3) 编译 .so（共享词法 + 规则解析器 + wrapper）
+    std::string soPath = absOut + "/lib" + meta.name + "_rule.so";
+    cmd = "g++ -std=c++17 -O2 -fPIC -shared -I" + includeDir + " -I" + antlrInc +
+          " -I" + sharedOut + " -I" + genDir + " " + wrapperPath + " " +
+          genDir + "/" + cls + ".cpp " + sharedOut + "/SQLTokens.cpp -L" +
+          antlrLib + " -lantlr4-runtime -Wl,-rpath," + antlrLib + " -o " + soPath;
+    if (std::system(cmd.c_str()) != 0) {
+        std::cerr << "[rulec] g++ failed, see " << wrapperPath << "\n";
+        return 1;
+    }
+
+    std::cout << "[rulec] " << ruleFile << " -> " << soPath << "\n"
+              << "        rule=" << meta.name << " severity=" << meta.severity
+              << " action=" << meta.action << " profile=" << meta.profile << "\n";
+    return 0;
 }
 
 }  // namespace
@@ -305,45 +235,37 @@ int main(int argc, char* argv[]) {
     std::string includeDir = ".";
     std::string outDir = "build/plugins";
     std::string ruleFile;
+    std::string antlrJar = "antlr-4.13.2-complete.jar";
+    std::string antlrInc;
+    std::string antlrLib;
+    std::string sharedDir = "rules/_shared";
 
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--include" && i + 1 < argc) includeDir = argv[++i];
         else if (a == "-o" && i + 1 < argc) outDir = argv[++i];
+        else if (a == "--antlr-jar" && i + 1 < argc) antlrJar = argv[++i];
+        else if (a == "--antlr-inc" && i + 1 < argc) antlrInc = argv[++i];
+        else if (a == "--antlr-lib" && i + 1 < argc) antlrLib = argv[++i];
+        else if (a == "--shared-dir" && i + 1 < argc) sharedDir = argv[++i];
         else ruleFile = a;
     }
 
     if (ruleFile.empty()) {
-        std::cerr << "usage: rulec [--include DIR] [-o OUTDIR] rule.g4\n";
+        std::cerr << "usage: rulec [--include DIR] [-o OUTDIR] [--antlr-jar JAR]"
+                     " [--antlr-inc DIR] [--antlr-lib DIR] [--shared-dir DIR] rule.g4\n";
+        return 2;
+    }
+    if (!isAntlrGrammar(ruleFile)) {
+        std::cerr << "[rulec] not an ANTLR grammar file: " << ruleFile << "\n";
+        return 2;
+    }
+    if (antlrInc.empty() || antlrLib.empty()) {
+        std::cerr << "[rulec] need --antlr-inc and --antlr-lib\n";
         return 2;
     }
 
-    try {
-        RuleDef rule = parseRuleFile(ruleFile);
-        std::string cc = generatePlugin(rule);
-
-        std::string mkdir = "mkdir -p " + outDir;
-        if (std::system(mkdir.c_str()) != 0) {
-            throw std::runtime_error("cannot create output dir: " + outDir);
-        }
-
-        std::string ccPath = outDir + "/" + rule.name + "_rule.cc";
-        std::string soPath = outDir + "/lib" + rule.name + "_rule.so";
-        if (!writeFile(ccPath, cc)) {
-            throw std::runtime_error("cannot write " + ccPath);
-        }
-        if (run("g++", includeDir, ccPath, soPath) != 0) {
-            throw std::runtime_error("g++ failed, see " + ccPath);
-        }
-
-        std::cout << "[rulec] " << ruleFile << " -> " << soPath << "\n"
-                  << "        rule=" << rule.name
-                  << " severity=" << rule.severity
-                  << " action=" << rule.action
-                  << " profile=" << rule.profile << "\n";
-        return 0;
-    } catch (const std::exception& e) {
-        std::cerr << "[rulec] error: " << e.what() << "\n";
-        return 1;
-    }
+    RuleMeta meta = parseMeta(ruleFile);
+    return compileAntlrRule(meta, ruleFile, outDir, includeDir, sharedDir,
+                            antlrJar, antlrInc, antlrLib);
 }

@@ -13,7 +13,7 @@ run() {
     "$WAF" --rules "$RULES_DIR" "$@" || true
 }
 
-run "1. 良性 SQL（期望 ALLOW）"                  --dump-ast "SELECT name FROM users WHERE id = 1"
+run "1. 良性 SQL（期望 ALLOW）"                  "SELECT name FROM users WHERE id = 1"
 run "2. WHERE 1=1 恒真（期望 BLOCK: always_true）" "SELECT * FROM users WHERE 1=1"
 run "3. UNION SELECT（期望 BLOCK: union_select）"  "SELECT id, name FROM users UNION SELECT user, password FROM admin"
 run "4. SLEEP 时间盲注（期望 BLOCK: sleep）"        "SELECT SLEEP(5)"

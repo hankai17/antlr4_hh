@@ -1,8 +1,13 @@
-// 字符串拼接 ||：片段解析器产出 BinaryExpr(op="||")。
-// || 本身可能是合法文本，LOW + 只告警。
-rule string_concat {
-    severity: LOW
-    action: ALLOW
-    description: "字符串拼接特征 ||"
-    pattern: BinaryExpr(op = "||")
-}
+// rule: string_concat
+// severity: LOW
+// action: ALLOW
+// description: 字符串拼接特征 ||
+// profile: sql
+
+parser grammar string_concat;
+
+options { tokenVocab = SQLTokens; }
+
+import SQLExpr;
+
+pattern : add_expr PIPE2 add_expr ;

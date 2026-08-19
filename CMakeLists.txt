@@ -42,18 +42,44 @@ link_directories(${ANTLR4_RUNTIME_LIB_DIR})
 set(CMAKE_BUILD_RPATH ${ANTLR4_RUNTIME_LIB_DIR})
 
 # ------------------------------------------------------------
+# ANTLR 生成：MiniSQL 解析器（构建时自动生成，不入库）
+# ------------------------------------------------------------
+
+find_program(JAVA_EXECUTABLE java)
+if(NOT JAVA_EXECUTABLE)
+    message(FATAL_ERROR
+        "java not found — required to generate ANTLR parsers at build time")
+endif()
+
+set(MINISQL_GEN_DIR ${CMAKE_BINARY_DIR}/gen/minisql)
+set(MINISQL_GEN_SOURCES
+    ${MINISQL_GEN_DIR}/MiniSQLLexer.cpp
+    ${MINISQL_GEN_DIR}/MiniSQLParser.cpp
+)
+
+add_custom_command(
+    OUTPUT ${MINISQL_GEN_SOURCES}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${MINISQL_GEN_DIR}
+    COMMAND ${JAVA_EXECUTABLE} -jar
+            ${CMAKE_CURRENT_SOURCE_DIR}/antlr-4.13.2-complete.jar
+            -Dlanguage=Cpp -no-listener -o ${MINISQL_GEN_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/MiniSQL.g4
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/MiniSQL.g4
+            ${CMAKE_CURRENT_SOURCE_DIR}/antlr-4.13.2-complete.jar
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "generate MiniSQL lexer/parser (ANTLR)"
+    VERBATIM
+)
+
+# ------------------------------------------------------------
 # 目标 1：WAF 主引擎
 # ------------------------------------------------------------
 
 add_executable(waf
     waf.cc
-    ast_builder.cc
-    fragment_lexer.cc
-    fragment_parser.cc
-    MiniSQLLexer.cpp
-    MiniSQLParser.cpp
-    MiniSQLBaseListener.cpp
+    ${MINISQL_GEN_SOURCES}
 )
+target_include_directories(waf PRIVATE ${MINISQL_GEN_DIR})
 target_link_libraries(waf PRIVATE antlr4-runtime ${CMAKE_DL_LIBS})
 
 # ------------------------------------------------------------
@@ -62,8 +88,6 @@ target_link_libraries(waf PRIVATE antlr4-runtime ${CMAKE_DL_LIBS})
 
 add_executable(rulec
     rule_compiler.cc
-    RuleLexer.cpp
-    RuleParser.cpp
 )
 target_link_libraries(rulec PRIVATE antlr4-runtime)
 
@@ -89,10 +113,13 @@ foreach(rule_file ${RULE_FILES})
         COMMAND $<TARGET_FILE:rulec>
                 --include ${CMAKE_CURRENT_SOURCE_DIR}
                 -o ${PLUGIN_OUT_DIR}
+                --antlr-jar ${CMAKE_CURRENT_SOURCE_DIR}/antlr-4.13.2-complete.jar
+                --antlr-inc ${ANTLR4_RUNTIME_INC_FOUND}
+                --antlr-lib ${ANTLR4_RUNTIME_LIB_DIR}
+                --shared-dir ${CMAKE_CURRENT_SOURCE_DIR}/rules/_shared
                 ${rule_file}
         DEPENDS rulec
                 ${rule_file}
-                ${CMAKE_CURRENT_SOURCE_DIR}/ast.h
                 ${CMAKE_CURRENT_SOURCE_DIR}/rule_plugin.h
         COMMENT "compile rule ${rule_file} -> ${plugin_so}"
         VERBATIM
@@ -125,21 +152,5 @@ add_custom_target(validate
             ${PLUGIN_OUT_DIR}
     DEPENDS waf plugins
     COMMENT "validate sqli rules against positive/negative samples"
-    VERBATIM
-)
-
-# ------------------------------------------------------------
-# 目标 6：重新生成 ANTLR 解析器（需要 java + antlr jar）
-# ------------------------------------------------------------
-
-add_custom_target(grammars
-    COMMAND java -jar ${CMAKE_CURRENT_SOURCE_DIR}/antlr-4.13.2-complete.jar
-            -Dlanguage=Cpp -no-listener
-            ${CMAKE_CURRENT_SOURCE_DIR}/Rule.g4
-    COMMAND java -jar ${CMAKE_CURRENT_SOURCE_DIR}/antlr-4.13.2-complete.jar
-            -Dlanguage=Cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/MiniSQL.g4
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "regenerate ANTLR lexer/parser sources"
     VERBATIM
 )

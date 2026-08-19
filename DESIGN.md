@@ -53,70 +53,29 @@ ALLOW / BLOCK / UNKNOWN
 
 | 层 | 负责什么 | 谁修改 |
 |---|---|---|
-| MiniSQL.g4 | SQL 结构解析（语法、方言） | 解析器维护者 |
-| Rule.g4 | 规则语言（攻击模式 DSL） | 规则语言维护者 |
-| AST builder | 解析树 -> 语义 AST 折叠 | 引擎维护者 |
+| MiniSQL.g4 | 完整 SQL 判定（语法、方言） | 解析器维护者 |
+| SQLTokens.g4 / SQLExpr.g4 | 规则共享词法 / 表达式语法 + 语义谓词 | 规则语法维护者 |
 | 规则文件 `rules/**/*.g4` | 具体攻击检测语义 | **安全人员** |
-| rulec | 规则 -> C++ -> .so 编译 | 引擎维护者（安全人员无感） |
+| rulec | ANTLR 规则语法 -> 解析器 -> .so 编译 | 引擎维护者（安全人员无感） |
 
 ## 3. 关键设计原则
 
 ### 3.1 Grammar 与 Rule 分离
 
-- `MiniSQL.g4`：只回答"这段 SQL 的结构是什么"，不含任何安全语义。
-- `Rule.g4`：定义规则文件的语法，让安全人员用声明式模式描述攻击。
-- 规则文件（`rules/**/*.g4`）只引用 **AST 节点类型**，不引用 SQL 文本。
+- `MiniSQL.g4`：只判定"是否完整可解析的 SQL"，不含任何安全语义。
+- `SQLTokens.g4` / `SQLExpr.g4`：规则共享的词法与表达式语法。
+- 规则文件（`rules/**/*.g4`）是**标准 ANTLR 语法**，用 token 与语义谓词描述攻击。
 
-这样 SQL 方言升级、新增语法时，规则不需要跟着改；反之新增规则也不动解析器。
+SQL 方言升级、新增 token 时只动共享语法；新增攻击规则只动 `rules/`，引擎零改动。
 
-### 3.2 AST 作为中间层
+### 3.2 判定语义（无 AST 层）
 
-解析树（parse tree）是语法细节的忠实投影（括号、优先级分层、中间规则），不适合直接做语义匹配。
-`AstBuilder`（一个 ANTLR Listener）把解析树折叠成紧凑的语义 AST：
+规则匹配直接作用于归一化文本的 token 流，不经过 AST；
+语义条件（如 `1=1` vs `1=2`）由规则语法里的 ANTLR 谓词直接表达。
+verdict 规则：完整 SQL 或命中任意规则 → ALLOW；否则 UNKNOWN
+（`--fail-closed` 可将 UNKNOWN 转 BLOCK）。
 
-```
-WHERE 1=1
-   |
-   v
-BinaryExpr {op="="}
-   |-- Constant {type=NUMBER, value=1}    (named: left)
-   |-- Constant {type=NUMBER, value=1}    (named: right)
-```
-
-规则不关心字符串，只关心语义；因此 `WHERE 1=1`、`WHERE (1)=(1)`、
-`WHERE 1 /*x*/ = 1` 折叠后是同一棵树。
-
-### 3.3 AST 节点模型（通用结构）
-
-`ast.h` 定义了一个与 SQL 方言无关的通用节点，主引擎与插件共享这一份头文件：
-
-```cpp
-struct AstNode {
-    std::string kind;                         // "Query" / "Select" / "BinaryExpr" / ...
-    std::map<std::string, std::string> attrs; // op、value、name、union、star ...
-    std::vector<std::unique_ptr<AstNode>> children;   // 有序子节点
-    std::map<std::string, AstNode*> named;    // 语义角色：left/right/operand/low/high
-};
-```
-
-当前原型支持的节点：
-
-| kind | 关键 attrs | 语义角色 |
-|---|---|---|
-| Query | union=true | - |
-| Select | star="\*", distinct=true | - |
-| SelectItem | - | - |
-| From / Where / GroupBy / Having / OrderBy / Limit | - | - |
-| TableRef | name, alias | - |
-| BinaryExpr | op（`=` `AND` `OR` `IN` `LIKE` `BETWEEN` `+` `-` ...） | left, right（low/high for BETWEEN） |
-| UnaryExpr | op（`NOT` `IS NULL` `EXISTS` `-` ...） | operand |
-| Constant | type（NUMBER/STRING/NULL/BOOL）, value | - |
-| ColumnRef | name, table, schema | - |
-| FunctionCall | name（小写化） | - |
-| List / CaseExpr / WhenClause / OrderItem | - | - |
-| Text（raw 画像专用） | value（归一化全文）, raw | - |
-
-## 4. 规则语言（Rule.g4）
+## 4. 规则语言（标准 ANTLR 语法）
 
 ### 4.1 语法
 
@@ -183,15 +142,46 @@ rule always_true {
 `1=1.0` 命中；`id=1`、`1=2` 不命中。字符串变体同理
 （`rules/sqli/string_tautology.g4`，`'a'='a'` 命中、`name='admin'` 不命中）。
 
+### 4.4 规则即 ANTLR 语法（当前规则集）
+
+`rules/` 下的攻击规则本身是**标准 ANTLR 语法文件**（parser grammar），
+每条规则由 ANTLR 生成各自的 C++ 匹配器，rulec 编译成独立 `.so`：
+
+```
+rules/sqli/always_true.g4（ANTLR 语法 + 元数据注释）
+   │ rulec：java 生成规则解析器（import SQLExpr）
+   ▼
+build/plugins/gen/always_true.{h,cpp} + wrapper
+   │ g++ -shared
+   ▼
+libalways_true_rule.so（text 模式：对归一化文本 token 流匹配）
+```
+
+- 共享词法 `SQLTokens.g4`：关键字映射、引号容错（字面量 vs 分隔引号）、未知字符跳过
+- 共享表达式语法 `SQLExpr.g4`：expr/comparison/select_stmt 与语义谓词
+  （isIdent / numbersEqual / stringsEqual），各规则 import 复用
+- 规则元数据（name/severity/action/description/profile）写在头部注释，rulec 解析
+- 引擎对 text 模式插件：归一化文本 → 共享词法 → 逐位置尝试 `pattern` 规则
+- profile 门控：`fragment`/`raw` 仅非完整 SQL 输入生效（保留上下文区分能力）
+
+> DSL 规则语言与 AST 语义匹配层已移除；规则集全部为标准 ANTLR 语法。
+
 `rules/xss/script_tag.g4`（raw 画像，不经过 SQL 解析）：
 
 ```
-rule script_tag {
-    severity: HIGH
-    profile: raw
-    description: "XSS：<script> 标签"
-    pattern: Text(contains = "<script")
-}
+// rule: script_tag
+// severity: HIGH
+// action: BLOCK
+// description: XSS：<script> 标签
+// profile: raw
+
+parser grammar script_tag;
+
+options { tokenVocab = SQLTokens; }
+
+import SQLExpr;
+
+pattern : LT i=IDENT {isIdent($i, "script")}? ;
 ```
 
 ## 5. 编译流水线（rulec）
@@ -199,23 +189,18 @@ rule script_tag {
 ```
 rules/sqli/sleep.g4
    |
-   | Rule.g4 parser（ANTLR）
+   | java 生成规则解析器（import SQLExpr / tokenVocab=SQLTokens）
    v
-规则 AST（name / severity / pattern 树）
+规则解析器 sleep.{h,cpp} + wrapper（waf_rule_check_text）
    |
-   | C++ 代码生成（纯字符串拼接，无模板元编程）
-   v
-build/plugins/sleep_rule.cc
-   |
-   | g++ -std=c++17 -O2 -fPIC -shared
+   | g++ -shared（共享词法 SQLTokens + 规则解析器 + wrapper）
    v
 build/plugins/libsleep_rule.so
 ```
 
-生成代码要点：每个模式节点对应一个 `static bool mN(const AstNode&)`，
-嵌套模式递归调用，`waf_rule_check` 用 `waf::matchAny` 做全树 DFS。
-生成的插件**只依赖 `ast.h` / `rule_plugin.h`**，不链接 ANTLR 运行时——
-插件可以独立分发、独立签名校验。
+插件导出 `waf_rule_check_text(const char*)`：对归一化文本做共享词法 +
+逐位置尝试 `pattern`（BailErrorStrategy）；命中即返回 true。
+共享词法只生成一次（幂等），插件可独立分发、独立签名校验。
 
 ## 6. 插件 ABI 与热加载
 
@@ -251,15 +236,13 @@ ANTLR 适合复杂 CFG，但逐请求跑完整解析在高压下成本偏高。�
 ```
 .
 ├── MiniSQL.g4            # SQL 结构语法（解析层）
-├── Rule.g4               # 规则语言语法（规则层）
-├── ast.h                 # AST 中间层（header-only，插件共享）
-├── ast_builder.{h,cc}    # 解析树 -> 语义 AST
 ├── rule_plugin.h         # 插件 ABI 契约
-├── rule_compiler.cc      # rulec：规则 -> C++ -> .so
-├── waf.cc                # 主引擎：Normalization/FastPath/Parser/AST/RuleEngine
+├── rule_compiler.cc      # rulec：ANTLR 规则语法 -> 解析器 -> .so
+├── waf.cc                # 主引擎：Normalization/FastPath/解析判定/RuleEngine
 ├── rules/
-│   ├── sqli/              # SQLi 规则合并集（拦截 + 检测）
-│   └── xss/script_tag.g4
+│   ├── _shared/          # SQLTokens.g4 / SQLExpr.g4（规则共享词法与表达式语法）
+│   ├── sqli/             # SQLi 规则（标准 ANTLR 语法）
+│   └── xss/script_tag.g4 # XSS raw 规则
 ├── validate_sqli.sh      # 规则校验逻辑（正/负样本断言）
 └── build/plugins/*.so    # 编译产物（热加载目录）
 ```
@@ -278,41 +261,39 @@ cmake --build build --target plugins
 ```
 
 （构建：`cmake -S . -B build && cmake --build build -j`；产物 `build/waf`、
-`build/rulec`、`build/plugins/*.so`。语法变更后用
-`cmake --build build --target grammars` 重新生成 ANTLR 解析器。）
+`build/rulec`、`build/plugins/*.so`。ANTLR 生成物不入库，构建时自动生成到
+`build/gen/`（MiniSQL）与 `build/plugins/gen/`（规则解析器）；
+改语法后重新 `cmake --build build` 即自动重新生成。）
 
 ## 10. 已实现原型 vs 生产化差距（Roadmap）
 
 ### 已实现
-- SQL -> AST 语义折叠（AND/OR 左结合、比较/IN/LIKE/BETWEEN/IS NULL/EXISTS、函数、CASE、子查询）
-- Rule.g4 规则语言 + rulec 编译器 + 独立 .so 插件
-- 语义谓词：属性路径等值（`left.value = right.value`）、数字字面量规范化
-- 一条规则多 pattern（OR 分支）、子查询标记（`subquery=true`）、EXISTS 独立表达式
-- 自有 SQLi 规则合并集（`rules/sqli/`，拦截 + 检测）+ `validate` 校验目标（43 个样本断言）
-- 片段防护：容错词法 + 片段解析器直接构造 AST（不塞完整语句），
-  `1 OR 1=1` / `admin' OR '1'='1'` / `UNION SELECT` 片段均可命中语义规则
-- 主引擎全流水线：Normalization -> Fast Path -> Parser -> AST -> Rule Engine -> Verdict
-- sql / raw 双画像（SQLi 语义检测 + XSS 文本检测）
-- ABI 协商、加载容错、fail-closed 选项、AST 调试输出
+- 攻击规则为标准 ANTLR 语法（25 条），rulec 逐条生成 C++ 匹配器 + 独立 .so
+- 共享规则语法：SQLTokens.g4（容错词法）+ SQLExpr.g4（表达式/语句 + 语义谓词）
+- 语义谓词：isIdent / numbersEqual / stringsEqual（`1=1`、`2=2`、`1=1.0` 可命中）
+- `validate` 校验目标（47 个正/负样本断言）
+- 片段防护：共享词法容错 + 规则语法逐位置匹配，
+  `1 OR 1=1` / `admin' OR '1'='1'` / `UNION SELECT` 片段均可命中规则
+- 主引擎全流水线：Normalization -> Fast Path -> 解析判定 -> Rule Engine -> Verdict
+- sql / fragment / raw 三画像门控 + fail-closed 选项
 
 ### 生产化差距
 - **Normalization 升级**：URL 解码、charset 探测、等价字符（全角/零宽）、
   字符串字面量感知的注释剥离（当前是朴素实现）。
 - **Fast Path 升级**：子串表替换为 DFA 状态机，特征与规则同源生成。
-- **规则语言扩展**：`regex`、`not`、`count`（如至少 N 个危险函数）、
-  跨节点约束（如 `BinaryExpr(op=OR)` 下同时出现两个恒真项）、
-  白名单 action 语义、规则依赖/优先级；**常量折叠**（`1+1=2`、`0*1=0`
-  等算术恒真需在 AST 层做常量表达式求值，当前是已知缺口）。
+- **规则语法扩展**：ANTLR 谓词里做常量折叠（`1+1=2`、`0*1=0` 算术恒真）、
+  跨 token 约束、规则依赖/优先级、白名单 action 语义。
 - **AST 覆盖面**：JOIN 语义、CTE、`BENCHMARK` 等更多函数族、
   XSS 走 HTML parser（`html.g4` -> DOM AST），RCE 走 shell/表达式解析器。
 - **生产级容错词法**：已实现基础容错（引号不平衡、未知字符跳过）；
   生产仍需 libinjection 级能力：charset/双重编码、嵌套引号、MySQL 注释变体等。
+- **解析器合并（可选）**：MiniSQL.g4（完整判定）与规则语法（SQLExpr）可进一步
+  统一，实现单一 SQL 语法。
 - **插件治理**：插件签名校验（防投毒 .so）、沙箱/受限编译选项、
   插件元数据版本、性能预算（超时/调用次数上限）。
 - **运行时形态**：常驻服务 + 请求上下文传递、规则热更（inotify）、
   匹配日志结构化输出、命中率/误报率统计。
-- **引擎性能**：AST 节点对象池、规则按 AST 节点类型索引（只跑可能命中的插件）、
-  并行规则求值。
+- **引擎性能**：规则按首 token 建索引（只跑可能命中的插件）、并行规则求值。
 
 ## 11. 安全与健壮性考量
 

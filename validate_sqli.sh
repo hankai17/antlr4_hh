@@ -25,7 +25,9 @@ check() {
     got=$(printf '%s\n' "$out" | grep -Eo 'ALLOW|BLOCK|UNKNOWN' | tail -1)
 
     if [[ "$expect_rule" == "NONE" ]]; then
-        if [[ "$got" != "ALLOW" ]]; then ok=0; fi
+        # 负样本：无规则命中；判词为 ALLOW（完整 SQL / Fast Path）或
+        # UNKNOWN（无法识别的裸片段，如 id=1）
+        if [[ "$got" != "ALLOW" && "$got" != "UNKNOWN" ]]; then ok=0; fi
         if printf '%s\n' "$out" | grep -q '!! '; then ok=0; fi
     else
         if [[ "$got" != "$expect_verdict" ]]; then ok=0; fi
@@ -55,6 +57,7 @@ check "1;DROP TABLE users"                               BLOCK   stacked_query
 check "SELECT SLEEP(5)"                                  BLOCK   sleep
 check "SELECT LOAD_FILE('/etc/passwd')"                  BLOCK   load_file
 check "SELECT BENCHMARK(10000000, MD5('x'))"             BLOCK   benchmark
+check "SELECT pg_sleep(5)"                               BLOCK   pg_sleep
 check "SELECT * FROM t WHERE 'a'='a'"                    BLOCK   string_tautology
 check "GET /q?x=<script>alert(1)</script>"               BLOCK   script_tag
 
@@ -89,6 +92,9 @@ check "LIMIT 1"                                          ALLOW   limit_expr
 check "EXISTS (SELECT 1 FROM s)"                         ALLOW   exists_subquery
 check "x = (SELECT 1)"                                   ALLOW   subquery
 check "admin' OR '1'='1' --"                             BLOCK   string_tautology
+check "SELECT * FROM information_schema.tables"          ALLOW   db_enumeration
+check "SELECT * FROM INFORMATION_SCHEMA"                 ALLOW   db_enumeration
+check "pg_sleep(5)"                                      BLOCK   pg_sleep
 
 # ------------------------------------------------------------
 # 负样本：不误报（ALLOW 且无任何规则命中）
@@ -97,7 +103,7 @@ check "SELECT name FROM users WHERE id = 1"              ALLOW   NONE
 check "SELECT 42"                                        ALLOW   NONE
 check "SELECT * FROM t WHERE a = 1 AND b = 2"            ALLOW   NONE
 check "hello world"                                      ALLOW   NONE
-check "id=1"                                             ALLOW   NONE
+check "id=1"                                             UNKNOWN NONE
 check "abc"                                              ALLOW   NONE
 check "age > 18"                                         ALLOW   NONE
 

@@ -27,9 +27,6 @@
 #include "MiniSQLLexer.h"
 #include "MiniSQLParser.h"
 
-#include "ast.h"
-#include "ast_builder.h"
-#include "fragment_parser.h"
 #include "rule_plugin.h"
 
 using namespace antlr4;
@@ -106,7 +103,7 @@ struct LoadedRule {
     std::string action;
     std::string description;
     std::string profile;
-    bool (*check)(const waf::AstNode&) = nullptr;
+    bool (*checkText)(const char*) = nullptr;
 };
 
 std::vector<std::string> listPlugins(const std::string& dir) {
@@ -132,8 +129,9 @@ std::vector<LoadedRule> loadRules(const std::string& dir) {
 
         auto abi = reinterpret_cast<int (*)()>(dlsym(handle, "waf_rule_abi"));
         auto infoFn = reinterpret_cast<const waf::RuleInfo* (*)()>(dlsym(handle, "waf_rule_info"));
-        auto checkFn = reinterpret_cast<bool (*)(const waf::AstNode&)>(dlsym(handle, "waf_rule_check"));
-        if (!abi || !infoFn || !checkFn) {
+        auto checkText = reinterpret_cast<bool (*)(const char*)>(
+            dlsym(handle, "waf_rule_check_text"));
+        if (!abi || !infoFn || !checkText) {
             std::cerr << "[waf] bad plugin symbols: " << path << "\n";
             dlclose(handle);
             continue;
@@ -153,7 +151,7 @@ std::vector<LoadedRule> loadRules(const std::string& dir) {
         r.action = info->action;
         r.description = info->description;
         r.profile = info->profile;
-        r.check = checkFn;
+        r.checkText = checkText;
         rules.push_back(std::move(r));
     }
     return rules;
@@ -189,14 +187,8 @@ std::vector<std::string> fastPathHit(const std::string& normalized) {
 // SQL 解析 -> AST
 // ------------------------------------------------------------
 
-enum class ParseStatus { OK, ERROR };
-
-struct SqlResult {
-    ParseStatus status = ParseStatus::ERROR;
-    waf::AstPtr ast;
-};
-
-SqlResult parseSql(const std::string& sql) {
+// 完整 SQL 解析：只判定"是不是完整可解析的 SQL"（fullSqlOk 门控与 UNKNOWN 判定）
+bool parseSql(const std::string& sql) {
     ANTLRInputStream input(sql);
     MiniSQLLexer lexer(&input);
     CommonTokenStream tokens(&lexer);
@@ -206,35 +198,7 @@ SqlResult parseSql(const std::string& sql) {
     parser.removeErrorListeners();
 
     MiniSQLParser::SqlContext* tree = parser.sql();
-    bool ok = lexer.getNumberOfSyntaxErrors() == 0 && parser.getNumberOfSyntaxErrors() == 0;
-
-    SqlResult res;
-    if (!ok) return res;
-
-    waf::AstBuilder builder;
-    antlr4::tree::ParseTreeWalker::DEFAULT.walk(&builder, tree);
-    res.ast = builder.result();
-    res.status = ParseStatus::OK;
-    return res;
-}
-
-// 真实请求大多是"不完整 SQL 片段"（参数值、注入后缀、引号不平衡载荷）。
-// 不再把片段塞进完整语句，而是用容错词法 + 片段解析器直接构造 AST
-// （fragment="true" 标记），语义规则原样复用。
-SqlResult parseSqlFragment(const std::string& frag) {
-    SqlResult res;
-    res.ast = waf::frag::parseFragment(frag);
-    if (res.ast) res.status = ParseStatus::OK;
-    return res;
-}
-
-// raw 画像：把归一化文本包成一个 Text 节点。
-// value 使用小写归一化文本，保证 contains 谓词大小写不敏感；raw 保留原文供日志。
-waf::AstPtr makeTextAst(const std::string& normalized, const std::string& raw) {
-    auto root = std::make_unique<waf::AstNode>("Text");
-    root->setAttr("value", lower(normalized));
-    root->setAttr("raw", raw);
-    return root;
+    return lexer.getNumberOfSyntaxErrors() == 0 && parser.getNumberOfSyntaxErrors() == 0;
 }
 
 std::string verdictName(bool blocked) {
@@ -247,7 +211,6 @@ int main(int argc, char* argv[]) {
     std::string rulesDir = "build/plugins";
     std::string payload;
     bool failClosed = false;
-    bool dumpAst = false;
 
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
@@ -255,8 +218,6 @@ int main(int argc, char* argv[]) {
             rulesDir = argv[++i];
         } else if (a == "--fail-closed") {
             failClosed = true;
-        } else if (a == "--dump-ast") {
-            dumpAst = true;
         } else if (a == "--") {
             if (i + 1 < argc) payload = argv[++i];
         } else {
@@ -265,7 +226,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (payload.empty()) {
-        std::cerr << "usage: waf [--rules DIR] [--fail-closed] [--dump-ast] \"payload\"\n";
+        std::cerr << "usage: waf [--rules DIR] [--fail-closed] \"payload\"\n";
         return 2;
     }
 
@@ -298,53 +259,25 @@ int main(int argc, char* argv[]) {
                   << "/" << r.profile << "] " << r.description << "\n";
     }
 
-    bool needSql = false, needRaw = false;
+    bool needSql = false;
     for (const auto& r : rules) {
         if (r.profile == "sql") needSql = true;
-        if (r.profile == "raw") needRaw = true;
     }
 
-    // 4. Parser -> AST（按规则画像按需构建）
-    waf::AstPtr sqlAst;
-    ParseStatus sqlStatus = ParseStatus::OK;
+    // 4. 完整 SQL 判定（fullSqlOk：fragment/raw 画像门控 + UNKNOWN 判定）
     bool fullSqlOk = false;
     if (needSql) {
-        SqlResult r = parseSql(normalized);
-        fullSqlOk = (r.status == ParseStatus::OK);
-        if (!fullSqlOk) {
-            // 容错片段解析：不完整 SQL 直接产出 AST（无需补全成完整语句）。
-            r = parseSqlFragment(normalized);
-            if (r.status == ParseStatus::OK) {
-                std::cout << "SQL PARSE: OK (fragment AST)\n";
-            } else {
-                std::cout << "SQL PARSE: ERROR\n";
-            }
-        } else {
-            std::cout << "SQL PARSE: OK\n";
-        }
-        sqlStatus = r.status;
-        sqlAst = std::move(r.ast);
-        if (dumpAst && sqlAst) std::cout << "SQL AST:\n" << sqlAst->dump();
-    }
-    bool sqlOk = (sqlStatus == ParseStatus::OK);
-
-    waf::AstPtr textAst;
-    // raw 规则作为兜底：仅完整 SQL 解析失败时参与判定（XSS 等非 SQL 载荷）。
-    bool runRaw = needRaw && !fullSqlOk;
-    if (runRaw) {
-        textAst = makeTextAst(normalized, payload);
-        if (dumpAst) std::cout << "TEXT AST:\n" << textAst->dump();
+        fullSqlOk = parseSql(normalized);
+        std::cout << "SQL PARSE: " << (fullSqlOk ? "OK" : "ERROR") << "\n";
     }
 
     // 5. Rule Engine
     std::vector<const LoadedRule*> matched;
     for (const auto& r : rules) {
-        bool hit = false;
-        if (r.profile == "sql") {
-            if (sqlAst && sqlStatus == ParseStatus::OK) hit = r.check(*sqlAst);
-        } else if (r.profile == "raw") {
-            if (textAst) hit = r.check(*textAst);
-        }
+        // ANTLR 语法规则：匹配归一化文本的 token 流；
+        // fragment/raw 画像只在输入不是完整 SQL 时参与判定
+        if ((r.profile == "fragment" || r.profile == "raw") && fullSqlOk) continue;
+        bool hit = r.checkText(normalized.c_str());
         if (hit) matched.push_back(&r);
     }
 
@@ -353,13 +286,14 @@ int main(int argc, char* argv[]) {
         std::cout << "  !! " << r->name << " [" << r->severity << "] " << r->description << "\n";
     }
 
-    // 6. Verdict
+    // 6. Verdict：完整 SQL 或命中任意规则 => 已识别（ALLOW），否则 UNKNOWN
     bool blocked = false;
     for (const auto* r : matched) {
         if (r->action == "BLOCK") blocked = true;
     }
 
-    if (sqlStatus == ParseStatus::ERROR && !blocked) {
+    bool sqlOk = fullSqlOk || !matched.empty();
+    if (!sqlOk && !blocked) {
         if (failClosed) {
             blocked = true;
             std::cout << "SQL PARSE ERROR with --fail-closed -> treated as BLOCK\n";

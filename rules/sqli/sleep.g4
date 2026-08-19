@@ -1,6 +1,14 @@
-// SQLi：时间盲注 SLEEP()
-rule sleep {
-    severity: CRITICAL
-    description: "时间盲注：SLEEP()"
-    pattern: FunctionCall(name = "sleep")
-}
+// rule: sleep
+// severity: CRITICAL
+// action: BLOCK
+// description: 时间盲注：SLEEP()
+// profile: sql
+
+parser grammar sleep;
+
+options { tokenVocab = SQLTokens; }
+
+import SQLExpr;
+
+// SLEEP 是函数名而非关键字：IDENT + 大小写不敏感谓词
+pattern : i=IDENT {isIdent($i, "sleep")}? LPAREN expr_list? RPAREN ;
