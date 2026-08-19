@@ -30,7 +30,7 @@ HTTP Request
 Normalization       解码 / 去注释 / 空白折叠 / 关键字混淆还原
    |
    v
-Fast Path           廉价预筛（yanshi 状态机 / 子串扫描）
+Fast Path           廉价预筛（DFA 状态机 / 子串扫描）
    | 无命中 -> ALLOW（不进入重解析，性能关键路径）
    | 命中
    v
@@ -135,8 +135,7 @@ patternArg : IDENT '=' STRING
 ```
 
 一条规则可以有多个 `patternDef`（`patternDef+`），语义为**或（OR）**，
-对应 yanshi 规则文件里的多分支 export（如 `1sqli_boolean` 覆盖
-`OR/AND × 左/右分支` 四种形状）。
+例如 `boolean_injection` 用四个 pattern 覆盖 `OR/AND × 左/右分支` 四种形状。
 
 ### 4.2 模式语义
 
@@ -234,17 +233,17 @@ ABI 不匹配都有独立日志且**不会拖垮引擎**。因此：
 - 新增规则 = 丢一个 `.g4` 进 `rules/`，`make plugins`，插件目录即热更新；
 - 引擎代码零改动；规则与引擎通过 AST + ABI 解耦。
 
-## 7. Fast Path：ANTLR 与 yanshi 的分工
+## 7. Fast Path 与 Deep Path 分层
 
 ANTLR 适合复杂 CFG，但逐请求跑完整解析在高压下成本偏高。设计上分两层：
 
 | 层 | 技术 | 成本 | 职责 |
 |---|---|---|---|
-| Fast Path | yanshi 状态机（DFA/正则编译） | O(n)，纳秒~微秒级 | 命中粗粒度攻击特征才放行到深检 |
+| Fast Path | 状态机（DFA/正则编译） | O(n)，纳秒~微秒级 | 命中粗粒度攻击特征才放行到深检 |
 | Deep Path | ANTLR SQL parser + AST + 规则插件 | 毫秒级 | 语义级判定，决定最终 ALLOW/BLOCK |
 
 原型用子串扫描表（`union` / `sleep(` / `load_file` / `1=1` / `<script` ...）
-模拟 yanshi 层；生产替换为 yanshi 编译出的 DFA，并把特征表从规则文件自动生成
+实现 Fast Path；生产可升级为 DFA 状态机，并把特征表从规则文件自动生成
 （规则与 fast-path 特征同源，避免漏配）。
 
 ## 8. 目录结构
@@ -259,8 +258,7 @@ ANTLR 适合复杂 CFG，但逐请求跑完整解析在高压下成本偏高。�
 ├── rule_compiler.cc      # rulec：规则 -> C++ -> .so
 ├── waf.cc                # 主引擎：Normalization/FastPath/Parser/AST/RuleEngine
 ├── rules/
-│   ├── sqli/always_true.g4  union_select.g4  sleep.g4  load_file.g4
-│   ├── sqli_rules/1sqli_boolean.g4 ... 17sqli_in.g4   # 镜像 yanshi 17 类 SQLi
+│   ├── sqli/              # SQLi 规则合并集（拦截 + 检测）
 │   └── xss/script_tag.g4
 ├── validate_sqli.sh      # 规则校验逻辑（正/负样本断言）
 └── build/plugins/*.so    # 编译产物（热加载目录）
@@ -290,7 +288,7 @@ cmake --build build --target plugins
 - Rule.g4 规则语言 + rulec 编译器 + 独立 .so 插件
 - 语义谓词：属性路径等值（`left.value = right.value`）、数字字面量规范化
 - 一条规则多 pattern（OR 分支）、子查询标记（`subquery=true`）、EXISTS 独立表达式
-- 镜像 yanshi sqli_rules 的 17 类 SQLi 规则 + `validate` 校验目标（43 个样本断言）
+- 自有 SQLi 规则合并集（`rules/sqli/`，拦截 + 检测）+ `validate` 校验目标（43 个样本断言）
 - 片段防护：容错词法 + 片段解析器直接构造 AST（不塞完整语句），
   `1 OR 1=1` / `admin' OR '1'='1'` / `UNION SELECT` 片段均可命中语义规则
 - 主引擎全流水线：Normalization -> Fast Path -> Parser -> AST -> Rule Engine -> Verdict
@@ -300,7 +298,7 @@ cmake --build build --target plugins
 ### 生产化差距
 - **Normalization 升级**：URL 解码、charset 探测、等价字符（全角/零宽）、
   字符串字面量感知的注释剥离（当前是朴素实现）。
-- **yanshi fast path**：子串表替换为 DFA 状态机，特征与规则同源生成。
+- **Fast Path 升级**：子串表替换为 DFA 状态机，特征与规则同源生成。
 - **规则语言扩展**：`regex`、`not`、`count`（如至少 N 个危险函数）、
   跨节点约束（如 `BinaryExpr(op=OR)` 下同时出现两个恒真项）、
   白名单 action 语义、规则依赖/优先级；**常量折叠**（`1+1=2`、`0*1=0`

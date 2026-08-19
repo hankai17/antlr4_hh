@@ -4,7 +4,7 @@
 // 请求处理流水线：
 //   HTTP payload
 //     -> Normalization（注释剥离、空白折叠）
-//     -> Fast Path（廉价子串扫描，无命中直接 ALLOW，模拟 yanshi 状态机层）
+//     -> Fast Path（廉价子串扫描，无命中直接 ALLOW，性能关键路径）
 //     -> MiniSQL Parser（完整 SQL，ANTLR 解析）
 //     -> Fragment Wrap（不完整 SQL：包装进合法上下文再解析，如 WHERE <payload>）
 //     -> AST（语义中间层，规则不接触 SQL 文本）
@@ -160,7 +160,7 @@ std::vector<LoadedRule> loadRules(const std::string& dir) {
 }
 
 // ------------------------------------------------------------
-// Fast Path（原型用子串扫描代替 yanshi 状态机）
+// Fast Path：廉价预筛层（原型用子串特征表，生产可升级为 DFA 状态机）
 // ------------------------------------------------------------
 
 const std::vector<std::string> kFastPathTokens = {

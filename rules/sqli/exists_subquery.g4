@@ -1,5 +1,5 @@
-// 14. EXISTS Injection（镜像 sqli_rules/14sqli_exists.t）
-rule sqli_exists {
+// EXISTS / NOT EXISTS 子查询结构检测。
+rule exists_subquery {
     severity: MEDIUM
     action: ALLOW
     description: "EXISTS 子查询结构检测"

@@ -21,6 +21,6 @@ run "5. LOAD_FILE 文件读取（期望 BLOCK: load_file）" "SELECT LOAD_FILE('
 run "6. XSS <script>（期望 BLOCK: script_tag）"     "GET /q?x=<script>alert(1)</script>"
 run "7. 非 SQL 良性请求（期望 FAST PATH ALLOW）"    "GET /index.html HTTP/1.1"
 run "8. BENCHMARK 性能消耗（期望 BLOCK: benchmark）" "SELECT BENCHMARK(10000000, MD5('x'))"
-run "9. 片段 1 OR 1=1（期望 BLOCK: sqli_boolean）"   "1 OR 1=1"
-run "10. 片段 UNION SELECT（期望 BLOCK: sqli_union）" "UNION SELECT 1,2,3"
+run "9. 片段 1 OR 1=1（期望 BLOCK: boolean_injection）" "1 OR 1=1"
+run "10. 片段 UNION SELECT（期望 BLOCK: union_select）" "UNION SELECT 1,2,3"
 run "11. 引号不平衡 admin' OR '1'='1'（期望 BLOCK）" "admin' OR '1'='1' --"

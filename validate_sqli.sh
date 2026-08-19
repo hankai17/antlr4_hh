@@ -46,12 +46,12 @@ check() {
 # 正样本：BLOCK 型规则（高置信度，拦截）
 # ------------------------------------------------------------
 check "SELECT * FROM users WHERE 1=1"                    BLOCK   always_true
-check "SELECT * FROM t WHERE a=1 OR 1=2"                 BLOCK   sqli_boolean
-check "SELECT * FROM t WHERE a=1 AND 1=1"                BLOCK   sqli_boolean
-check "SELECT * FROM t WHERE 2=2 OR b=3"                 BLOCK   sqli_boolean
-check "SELECT id,name FROM users UNION SELECT user,password FROM admin" BLOCK sqli_union
-check "1;SELECT * FROM users"                            BLOCK   sqli_stacked
-check "1;DROP TABLE users"                               BLOCK   sqli_stacked
+check "SELECT * FROM t WHERE a=1 OR 1=2"                 BLOCK   boolean_injection
+check "SELECT * FROM t WHERE a=1 AND 1=1"                BLOCK   boolean_injection
+check "SELECT * FROM t WHERE 2=2 OR b=3"                 BLOCK   boolean_injection
+check "SELECT id,name FROM users UNION SELECT user,password FROM admin" BLOCK union_select
+check "1;SELECT * FROM users"                            BLOCK   stacked_query
+check "1;DROP TABLE users"                               BLOCK   stacked_query
 check "SELECT SLEEP(5)"                                  BLOCK   sleep
 check "SELECT LOAD_FILE('/etc/passwd')"                  BLOCK   load_file
 check "SELECT BENCHMARK(10000000, MD5('x'))"             BLOCK   benchmark
@@ -61,33 +61,33 @@ check "GET /q?x=<script>alert(1)</script>"               BLOCK   script_tag
 # ------------------------------------------------------------
 # 正样本：检测型规则（命中但按 action 放行 / 解析失败）
 # ------------------------------------------------------------
-check "SELECT * FROM t WHERE id IN (SELECT id FROM s)"   ALLOW   sqli_subquery
-check "SELECT * FROM t WHERE id IN (SELECT id FROM s)"   ALLOW   sqli_in
-check "SELECT * FROM t WHERE EXISTS (SELECT 1 FROM s)"   ALLOW   sqli_exists
-check "SELECT * FROM t WHERE NOT EXISTS (SELECT 1 FROM s)" ALLOW sqli_exists
-check "SELECT * FROM t WHERE name LIKE '%x%'"            ALLOW   sqli_like
-check "SELECT * FROM t WHERE id BETWEEN 1 AND 5"         ALLOW   sqli_between
-check "SELECT * FROM t WHERE 1+1=2"                      ALLOW   sqli_numeric
-check "SELECT * FROM t ORDER BY 1"                       ALLOW   sqli_order_by
-check "SELECT * FROM t LIMIT 10"                         ALLOW   sqli_limit
-check "SELECT * FROM t WHERE a='x' || 'y'"               ALLOW   sqli_strcat
-check "INSERT INTO users VALUES (1)"                     ALLOW   sqli_insert
-check "UPDATE users SET name='x'"                        ALLOW   sqli_update
-check "DELETE FROM users"                                ALLOW   sqli_delete
-check "x' UNION SELECT 1,2,3"                            BLOCK   sqli_union
-check "foo SELECT a FROM b"                              ALLOW   sqli_select_from
+check "SELECT * FROM t WHERE id IN (SELECT id FROM s)"   ALLOW   subquery
+check "SELECT * FROM t WHERE id IN (SELECT id FROM s)"   ALLOW   in_subquery
+check "SELECT * FROM t WHERE EXISTS (SELECT 1 FROM s)"   ALLOW   exists_subquery
+check "SELECT * FROM t WHERE NOT EXISTS (SELECT 1 FROM s)" ALLOW exists_subquery
+check "SELECT * FROM t WHERE name LIKE '%x%'"            ALLOW   like_expr
+check "SELECT * FROM t WHERE id BETWEEN 1 AND 5"         ALLOW   between_expr
+check "SELECT * FROM t WHERE 1+1=2"                      ALLOW   numeric_expr
+check "SELECT * FROM t ORDER BY 1"                       ALLOW   order_by_expr
+check "SELECT * FROM t LIMIT 10"                         ALLOW   limit_expr
+check "SELECT * FROM t WHERE a='x' || 'y'"               ALLOW   string_concat
+check "INSERT INTO users VALUES (1)"                     ALLOW   insert_fragment
+check "UPDATE users SET name='x'"                        ALLOW   update_fragment
+check "DELETE FROM users"                                ALLOW   delete_fragment
+check "x' UNION SELECT 1,2,3"                            BLOCK   union_select
+check "foo SELECT a FROM b"                              ALLOW   select_from_fragment
 
 # ------------------------------------------------------------
 # 片段（不完整 SQL）正样本：包装进合法上下文后语义规则生效
 # ------------------------------------------------------------
-check "1 OR 1=1"                                         BLOCK   sqli_boolean
+check "1 OR 1=1"                                         BLOCK   boolean_injection
 check "2=2"                                              BLOCK   always_true
 check "'a'='a'"                                          BLOCK   string_tautology
-check "UNION SELECT 1,2,3"                               BLOCK   sqli_union
-check "ORDER BY 1"                                       ALLOW   sqli_order_by
-check "LIMIT 1"                                          ALLOW   sqli_limit
-check "EXISTS (SELECT 1 FROM s)"                         ALLOW   sqli_exists
-check "x = (SELECT 1)"                                   ALLOW   sqli_subquery
+check "UNION SELECT 1,2,3"                               BLOCK   union_select
+check "ORDER BY 1"                                       ALLOW   order_by_expr
+check "LIMIT 1"                                          ALLOW   limit_expr
+check "EXISTS (SELECT 1 FROM s)"                         ALLOW   exists_subquery
+check "x = (SELECT 1)"                                   ALLOW   subquery
 check "admin' OR '1'='1' --"                             BLOCK   string_tautology
 
 # ------------------------------------------------------------

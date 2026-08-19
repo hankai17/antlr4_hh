@@ -1,5 +1,5 @@
-// 15. LIKE Injection（镜像 sqli_rules/15sqli_like.t）
-rule sqli_like {
+// LIKE / NOT LIKE 表达式结构检测。
+rule like_expr {
     severity: LOW
     action: ALLOW
     description: "LIKE 表达式结构检测"

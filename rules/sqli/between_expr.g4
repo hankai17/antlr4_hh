@@ -1,5 +1,5 @@
-// 16. BETWEEN Injection（镜像 sqli_rules/16sqli_between.t）
-rule sqli_between {
+// BETWEEN / NOT BETWEEN 表达式结构检测。
+rule between_expr {
     severity: LOW
     action: ALLOW
     description: "BETWEEN 表达式结构检测"

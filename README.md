@@ -24,7 +24,7 @@ HTTP Request
 Normalization       解码 / 去注释 / 空白折叠 / 关键字混淆还原
    |
    v
-Fast Path           廉价预筛（yanshi 状态机 / 子串扫描），无命中直接 ALLOW
+Fast Path           廉价预筛（DFA 状态机 / 子串扫描），无命中直接 ALLOW
    | 命中
    v
 SQL Parser          ANTLR4 + MiniSQL.g4（完整 SQL 解析）
@@ -67,14 +67,14 @@ BinaryExpr {op="="}
 因此 `WHERE 1=1`、`WHERE (1)=(1)`、`WHERE 1 /*x*/ = 1` 折叠后是同一棵树；
 规则关心"语义"而非字符串，`2=2`、`1=1.0` 也能命中恒真检测，`id=1` 不误报。
 
-### ANTLR 与 yanshi 分工
+### Fast Path 与 Deep Path 分层
 
 | 层 | 技术 | 职责 |
 |---|---|---|
-| Fast Path | yanshi 状态机（DFA / 子串扫描） | O(n) 廉价预筛，无攻击特征直接 ALLOW |
+| Fast Path | 状态机（DFA / 子串扫描） | O(n) 廉价预筛，无攻击特征直接 ALLOW |
 | Deep Path | ANTLR SQL parser + AST + 规则插件 | 语义级判定，决定最终 ALLOW / BLOCK |
 
-原型用子串特征表模拟 yanshi 层；生产可替换为 yanshi 编译出的 DFA，
+原型用子串特征表实现 Fast Path；生产可升级为 DFA 状态机，
 并把 fast-path 特征与规则同源生成，避免漏配。
 
 ### 片段（不完整 SQL）防护
@@ -114,8 +114,8 @@ BinaryExpr {op="="}
 | 规则编译器 | `rule_compiler.cc` | `.g4` → 生成 C++ → `g++ -shared` → `.so` |
 | 插件 ABI | `rule_plugin.h` | `waf_rule_abi / waf_rule_info / waf_rule_check` |
 | 主引擎 | `waf.cc` | Normalization → Fast Path → Parser → AST → Rule Engine → Verdict |
-| 规则集 | `rules/` | 高置信度精简集 + 17 类 SQLi 镜像集 + XSS |
-| 校验逻辑 | `validate_sqli.sh` | 42 个正/负样本断言，验证规则不误报、不漏报 |
+| 规则集 | `rules/` | `rules/sqli/`（拦截 + 检测合并集）+ `rules/xss/` |
+| 校验逻辑 | `validate_sqli.sh` | 43 个正/负样本断言，验证规则不误报、不漏报 |
 
 ## 规则集
 
@@ -124,12 +124,13 @@ BinaryExpr {op="="}
 `always_true`（两侧等值常量：1=1 / 2=2 / 1=1.0）、`string_tautology`（'a'='a'）、
 `union_select`、`sleep`、`load_file`、`benchmark`、`script_tag`（XSS，raw 画像）。
 
-### 17 类 SQLi 镜像集（`rules/sqli_rules/`，对应 yanshi sqli_rules）
+### 检测型规则（`rules/sqli/` 合并集）
 
-布尔注入、UNION、子查询、字符串拼接、数值表达式、堆叠查询、ORDER BY、LIMIT、
-INSERT、UPDATE、DELETE、SELECT、SELECT+FROM、EXISTS、LIKE、BETWEEN、IN。
+除高置信度拦截规则外，`rules/sqli/` 还包含覆盖 SQLi 常见攻击形状的检测规则：
+布尔注入、堆叠查询、子查询、EXISTS/IN 子查询、LIKE/BETWEEN/数值表达式、
+字符串拼接（||）、ORDER BY/LIMIT、INSERT/UPDATE/DELETE/SELECT 语句片段。
 
-分层策略（与 yanshi 的 fragment 检测语义一致）：
+分层策略：
 
 - 高置信度（UNION、堆叠查询、布尔恒真形状、危险函数）→ `BLOCK`
 - 中/低置信度结构特征（子查询、LIKE、BETWEEN、ORDER BY、LIMIT、`||`、
@@ -157,7 +158,7 @@ rule always_true {
 - `role = Pattern`：语义角色子节点递归匹配（如 `left = Constant(...)`）
 - `left.value = right.value`：跨节点属性比较（语义条件，`2=2` / `1=1.0` 可命中）
 - `contains = "s"`：文本包含（raw 画像）
-- 一条规则多个 `pattern` = 或（OR）分支，对应 yanshi 的 `|`
+- 一条规则多个 `pattern` = 或（OR）多分支
 
 ## 快速开始
 
@@ -203,7 +204,7 @@ cmake --build build --target plugins
 
 - demo 11 例：良性 SQL ALLOW、恒真/UNION/SLEEP/LOAD_FILE/BENCHMARK/XSS/堆叠均 BLOCK、
   片段（`1 OR 1=1` / `UNION SELECT` / `admin' OR '1'='1'`）BLOCK、非 SQL 请求 Fast Path 放行
-- validate 43 例：17 类 SQLi 正例 + 危险函数/XSS 正例 + 片段正例全部命中；
+- validate 43 例：SQLi 拦截/检测正例 + 危险函数/XSS 正例 + 片段正例全部命中；
   7 个负样本（`id=1`、`a=1 AND b=2`、`age > 18` 等）零误报
 
 ## 目录结构
@@ -222,8 +223,7 @@ cmake --build build --target plugins
 ├── demo.sh              # 端到端演示脚本
 ├── validate_sqli.sh     # 规则校验逻辑
 ├── rules/
-│   ├── sqli/            # 高置信度精简规则集
-│   ├── sqli_rules/      # 17 类 SQLi 镜像集（对应 yanshi sqli_rules/）
+│   ├── sqli/            # SQLi 规则合并集（拦截 + 检测）
 │   └── xss/             # XSS raw 规则
 └── build/plugins/       # 编译出的 .so（热加载目录）
 ```
