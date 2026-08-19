@@ -16,6 +16,7 @@ public:
     void exitQueryStatement(MiniSQLParser::QueryStatementContext* ctx) override;
 
     void enterQueryExpression(MiniSQLParser::QueryExpressionContext* ctx) override;
+    void exitQueryExpression(MiniSQLParser::QueryExpressionContext* ctx) override;
 
     void enterQuerySpecification(MiniSQLParser::QuerySpecificationContext* ctx) override;
     void exitQuerySpecification(MiniSQLParser::QuerySpecificationContext* ctx) override;
@@ -83,6 +84,7 @@ public:
 private:
     AstPtr root_;
     std::vector<AstNode*> stack_;
+    std::vector<bool> subqueryStack_;  // 顶层 Query 之外出现的 queryExpression = 子查询
 
     AstNode* top();
     AstNode* pushNode(const std::string& kind);

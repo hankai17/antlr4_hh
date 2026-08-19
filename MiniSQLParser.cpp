@@ -81,7 +81,7 @@ void minisqlParserInitialize() {
     }
   );
   static const int32_t serializedATNSegment[] = {
-  	4,1,64,475,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,
+  	4,1,64,488,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,
   	7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,7,
   	14,2,15,7,15,2,16,7,16,2,17,7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,7,
   	21,2,22,7,22,2,23,7,23,2,24,7,24,2,25,7,25,2,26,7,26,2,27,7,27,2,28,7,
@@ -105,32 +105,33 @@ void minisqlParserInitialize() {
   	21,5,21,279,8,21,10,21,12,21,282,9,21,1,22,1,22,3,22,286,8,22,1,23,1,
   	23,1,23,1,23,3,23,292,8,23,1,24,1,24,1,25,1,25,1,25,5,25,299,8,25,10,
   	25,12,25,302,9,25,1,26,1,26,1,26,5,26,307,8,26,10,26,12,26,310,9,26,1,
-  	27,1,27,1,27,3,27,315,8,27,1,28,1,28,1,28,1,28,1,28,1,28,3,28,323,8,28,
-  	1,28,1,28,1,28,3,28,328,8,28,1,28,1,28,1,28,3,28,333,8,28,1,28,1,28,1,
-  	28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,
-  	28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,
-  	28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,3,28,374,8,28,1,29,1,29,1,
-  	30,1,30,1,30,5,30,381,8,30,10,30,12,30,384,9,30,1,31,1,31,1,31,5,31,389,
-  	8,31,10,31,12,31,392,9,31,1,32,1,32,1,32,1,32,1,32,3,32,399,8,32,1,33,
-  	1,33,1,33,1,33,1,33,1,33,1,33,1,33,1,33,1,33,1,33,1,33,3,33,413,8,33,
-  	1,34,1,34,1,34,1,34,1,34,1,34,1,34,1,34,1,34,1,34,1,34,3,34,426,8,34,
-  	1,35,1,35,1,35,3,35,431,8,35,1,35,1,35,1,36,1,36,3,36,437,8,36,1,37,1,
-  	37,3,37,441,8,37,1,37,4,37,444,8,37,11,37,12,37,445,1,37,1,37,3,37,450,
-  	8,37,1,37,1,37,1,38,1,38,1,38,1,38,1,38,1,39,1,39,3,39,461,8,39,1,40,
-  	1,40,1,40,5,40,466,8,40,10,40,12,40,469,9,40,1,41,1,41,1,42,1,42,1,42,
+  	27,1,27,1,27,3,27,315,8,27,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,
+  	28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,3,28,334,8,28,1,28,1,28,1,
+  	28,3,28,339,8,28,1,28,1,28,1,28,3,28,344,8,28,1,28,1,28,1,28,1,28,1,28,
+  	1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,
+  	1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,
+  	1,28,1,28,1,28,1,28,1,28,1,28,3,28,385,8,28,3,28,387,8,28,1,29,1,29,1,
+  	30,1,30,1,30,5,30,394,8,30,10,30,12,30,397,9,30,1,31,1,31,1,31,5,31,402,
+  	8,31,10,31,12,31,405,9,31,1,32,1,32,1,32,1,32,1,32,3,32,412,8,32,1,33,
+  	1,33,1,33,1,33,1,33,1,33,1,33,1,33,1,33,1,33,1,33,1,33,3,33,426,8,33,
+  	1,34,1,34,1,34,1,34,1,34,1,34,1,34,1,34,1,34,1,34,1,34,3,34,439,8,34,
+  	1,35,1,35,1,35,3,35,444,8,35,1,35,1,35,1,36,1,36,3,36,450,8,36,1,37,1,
+  	37,3,37,454,8,37,1,37,4,37,457,8,37,11,37,12,37,458,1,37,1,37,3,37,463,
+  	8,37,1,37,1,37,1,38,1,38,1,38,1,38,1,38,1,39,1,39,3,39,474,8,39,1,40,
+  	1,40,1,40,5,40,479,8,40,10,40,12,40,482,9,40,1,41,1,41,1,42,1,42,1,42,
   	0,0,43,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,
   	46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,0,7,1,0,13,
   	14,1,0,36,37,1,0,43,48,1,0,49,50,1,0,51,53,2,0,33,35,58,59,1,0,60,61,
-  	507,0,86,1,0,0,0,2,89,1,0,0,0,4,92,1,0,0,0,6,96,1,0,0,0,8,108,1,0,0,0,
+  	522,0,86,1,0,0,0,2,89,1,0,0,0,4,92,1,0,0,0,6,96,1,0,0,0,8,108,1,0,0,0,
   	10,117,1,0,0,0,12,128,1,0,0,0,14,144,1,0,0,0,16,146,1,0,0,0,18,169,1,
   	0,0,0,20,180,1,0,0,0,22,182,1,0,0,0,24,189,1,0,0,0,26,198,1,0,0,0,28,
   	221,1,0,0,0,30,224,1,0,0,0,32,245,1,0,0,0,34,261,1,0,0,0,36,263,1,0,0,
   	0,38,266,1,0,0,0,40,270,1,0,0,0,42,273,1,0,0,0,44,283,1,0,0,0,46,287,
   	1,0,0,0,48,293,1,0,0,0,50,295,1,0,0,0,52,303,1,0,0,0,54,314,1,0,0,0,56,
-  	316,1,0,0,0,58,375,1,0,0,0,60,377,1,0,0,0,62,385,1,0,0,0,64,398,1,0,0,
-  	0,66,412,1,0,0,0,68,425,1,0,0,0,70,427,1,0,0,0,72,436,1,0,0,0,74,438,
-  	1,0,0,0,76,453,1,0,0,0,78,460,1,0,0,0,80,462,1,0,0,0,82,470,1,0,0,0,84,
-  	472,1,0,0,0,86,87,3,2,1,0,87,88,5,0,0,1,88,1,1,0,0,0,89,90,3,4,2,0,90,
+  	386,1,0,0,0,58,388,1,0,0,0,60,390,1,0,0,0,62,398,1,0,0,0,64,411,1,0,0,
+  	0,66,425,1,0,0,0,68,438,1,0,0,0,70,440,1,0,0,0,72,449,1,0,0,0,74,451,
+  	1,0,0,0,76,466,1,0,0,0,78,473,1,0,0,0,80,475,1,0,0,0,82,483,1,0,0,0,84,
+  	485,1,0,0,0,86,87,3,2,1,0,87,88,5,0,0,1,88,1,1,0,0,0,89,90,3,4,2,0,90,
   	3,1,0,0,0,91,93,3,6,3,0,92,91,1,0,0,0,92,93,1,0,0,0,93,94,1,0,0,0,94,
   	95,3,12,6,0,95,5,1,0,0,0,96,98,5,1,0,0,97,99,5,2,0,0,98,97,1,0,0,0,98,
   	99,1,0,0,0,99,100,1,0,0,0,100,105,3,8,4,0,101,102,5,56,0,0,102,104,3,
@@ -193,56 +194,59 @@ void minisqlParserInitialize() {
   	1,0,0,0,303,308,3,54,27,0,304,305,5,25,0,0,305,307,3,54,27,0,306,304,
   	1,0,0,0,307,310,1,0,0,0,308,306,1,0,0,0,308,309,1,0,0,0,309,53,1,0,0,
   	0,310,308,1,0,0,0,311,312,5,27,0,0,312,315,3,54,27,0,313,315,3,56,28,
-  	0,314,311,1,0,0,0,314,313,1,0,0,0,315,55,1,0,0,0,316,373,3,60,30,0,317,
-  	318,3,58,29,0,318,319,3,60,30,0,319,374,1,0,0,0,320,322,5,32,0,0,321,
-  	323,5,27,0,0,322,321,1,0,0,0,322,323,1,0,0,0,323,324,1,0,0,0,324,374,
-  	5,33,0,0,325,327,5,32,0,0,326,328,5,27,0,0,327,326,1,0,0,0,327,328,1,
-  	0,0,0,328,329,1,0,0,0,329,374,5,34,0,0,330,332,5,32,0,0,331,333,5,27,
-  	0,0,332,331,1,0,0,0,332,333,1,0,0,0,333,334,1,0,0,0,334,374,5,35,0,0,
-  	335,336,5,28,0,0,336,337,5,54,0,0,337,338,3,78,39,0,338,339,5,55,0,0,
-  	339,374,1,0,0,0,340,341,5,27,0,0,341,342,5,28,0,0,342,343,5,54,0,0,343,
-  	344,3,78,39,0,344,345,5,55,0,0,345,374,1,0,0,0,346,347,5,29,0,0,347,374,
-  	3,60,30,0,348,349,5,27,0,0,349,350,5,29,0,0,350,374,3,60,30,0,351,352,
-  	5,30,0,0,352,353,3,60,30,0,353,354,5,25,0,0,354,355,3,60,30,0,355,374,
-  	1,0,0,0,356,357,5,27,0,0,357,358,5,30,0,0,358,359,3,60,30,0,359,360,5,
-  	25,0,0,360,361,3,60,30,0,361,374,1,0,0,0,362,363,5,31,0,0,363,364,5,54,
-  	0,0,364,365,3,12,6,0,365,366,5,55,0,0,366,374,1,0,0,0,367,368,5,27,0,
-  	0,368,369,5,31,0,0,369,370,5,54,0,0,370,371,3,12,6,0,371,372,5,55,0,0,
-  	372,374,1,0,0,0,373,317,1,0,0,0,373,320,1,0,0,0,373,325,1,0,0,0,373,330,
-  	1,0,0,0,373,335,1,0,0,0,373,340,1,0,0,0,373,346,1,0,0,0,373,348,1,0,0,
-  	0,373,351,1,0,0,0,373,356,1,0,0,0,373,362,1,0,0,0,373,367,1,0,0,0,373,
-  	374,1,0,0,0,374,57,1,0,0,0,375,376,7,2,0,0,376,59,1,0,0,0,377,382,3,62,
-  	31,0,378,379,7,3,0,0,379,381,3,62,31,0,380,378,1,0,0,0,381,384,1,0,0,
-  	0,382,380,1,0,0,0,382,383,1,0,0,0,383,61,1,0,0,0,384,382,1,0,0,0,385,
-  	390,3,64,32,0,386,387,7,4,0,0,387,389,3,64,32,0,388,386,1,0,0,0,389,392,
-  	1,0,0,0,390,388,1,0,0,0,390,391,1,0,0,0,391,63,1,0,0,0,392,390,1,0,0,
-  	0,393,394,5,49,0,0,394,399,3,64,32,0,395,396,5,50,0,0,396,399,3,64,32,
-  	0,397,399,3,66,33,0,398,393,1,0,0,0,398,395,1,0,0,0,398,397,1,0,0,0,399,
-  	65,1,0,0,0,400,413,3,82,41,0,401,413,3,68,34,0,402,413,3,70,35,0,403,
-  	413,3,74,37,0,404,405,5,54,0,0,405,406,3,48,24,0,406,407,5,55,0,0,407,
-  	413,1,0,0,0,408,409,5,54,0,0,409,410,3,12,6,0,410,411,5,55,0,0,411,413,
-  	1,0,0,0,412,400,1,0,0,0,412,401,1,0,0,0,412,402,1,0,0,0,412,403,1,0,0,
-  	0,412,404,1,0,0,0,412,408,1,0,0,0,413,67,1,0,0,0,414,426,3,84,42,0,415,
-  	416,3,84,42,0,416,417,5,57,0,0,417,418,3,84,42,0,418,426,1,0,0,0,419,
-  	420,3,84,42,0,420,421,5,57,0,0,421,422,3,84,42,0,422,423,5,57,0,0,423,
-  	424,3,84,42,0,424,426,1,0,0,0,425,414,1,0,0,0,425,415,1,0,0,0,425,419,
-  	1,0,0,0,426,69,1,0,0,0,427,428,3,84,42,0,428,430,5,54,0,0,429,431,3,72,
-  	36,0,430,429,1,0,0,0,430,431,1,0,0,0,431,432,1,0,0,0,432,433,5,55,0,0,
-  	433,71,1,0,0,0,434,437,5,51,0,0,435,437,3,80,40,0,436,434,1,0,0,0,436,
-  	435,1,0,0,0,437,73,1,0,0,0,438,440,5,38,0,0,439,441,3,48,24,0,440,439,
-  	1,0,0,0,440,441,1,0,0,0,441,443,1,0,0,0,442,444,3,76,38,0,443,442,1,0,
-  	0,0,444,445,1,0,0,0,445,443,1,0,0,0,445,446,1,0,0,0,446,449,1,0,0,0,447,
-  	448,5,41,0,0,448,450,3,48,24,0,449,447,1,0,0,0,449,450,1,0,0,0,450,451,
-  	1,0,0,0,451,452,5,42,0,0,452,75,1,0,0,0,453,454,5,39,0,0,454,455,3,48,
-  	24,0,455,456,5,40,0,0,456,457,3,48,24,0,457,77,1,0,0,0,458,461,3,80,40,
-  	0,459,461,3,12,6,0,460,458,1,0,0,0,460,459,1,0,0,0,461,79,1,0,0,0,462,
-  	467,3,48,24,0,463,464,5,56,0,0,464,466,3,48,24,0,465,463,1,0,0,0,466,
-  	469,1,0,0,0,467,465,1,0,0,0,467,468,1,0,0,0,468,81,1,0,0,0,469,467,1,
-  	0,0,0,470,471,7,5,0,0,471,83,1,0,0,0,472,473,7,6,0,0,473,85,1,0,0,0,56,
-  	92,98,105,110,123,131,136,144,148,152,155,158,161,164,167,177,180,184,
-  	187,195,202,207,210,216,219,221,224,229,234,238,242,245,256,261,280,285,
-  	291,300,308,314,322,327,332,373,382,390,398,412,425,430,436,440,445,449,
-  	460,467
+  	0,314,311,1,0,0,0,314,313,1,0,0,0,315,55,1,0,0,0,316,317,5,31,0,0,317,
+  	318,5,54,0,0,318,319,3,12,6,0,319,320,5,55,0,0,320,387,1,0,0,0,321,322,
+  	5,27,0,0,322,323,5,31,0,0,323,324,5,54,0,0,324,325,3,12,6,0,325,326,5,
+  	55,0,0,326,387,1,0,0,0,327,384,3,60,30,0,328,329,3,58,29,0,329,330,3,
+  	60,30,0,330,385,1,0,0,0,331,333,5,32,0,0,332,334,5,27,0,0,333,332,1,0,
+  	0,0,333,334,1,0,0,0,334,335,1,0,0,0,335,385,5,33,0,0,336,338,5,32,0,0,
+  	337,339,5,27,0,0,338,337,1,0,0,0,338,339,1,0,0,0,339,340,1,0,0,0,340,
+  	385,5,34,0,0,341,343,5,32,0,0,342,344,5,27,0,0,343,342,1,0,0,0,343,344,
+  	1,0,0,0,344,345,1,0,0,0,345,385,5,35,0,0,346,347,5,28,0,0,347,348,5,54,
+  	0,0,348,349,3,78,39,0,349,350,5,55,0,0,350,385,1,0,0,0,351,352,5,27,0,
+  	0,352,353,5,28,0,0,353,354,5,54,0,0,354,355,3,78,39,0,355,356,5,55,0,
+  	0,356,385,1,0,0,0,357,358,5,29,0,0,358,385,3,60,30,0,359,360,5,27,0,0,
+  	360,361,5,29,0,0,361,385,3,60,30,0,362,363,5,30,0,0,363,364,3,60,30,0,
+  	364,365,5,25,0,0,365,366,3,60,30,0,366,385,1,0,0,0,367,368,5,27,0,0,368,
+  	369,5,30,0,0,369,370,3,60,30,0,370,371,5,25,0,0,371,372,3,60,30,0,372,
+  	385,1,0,0,0,373,374,5,31,0,0,374,375,5,54,0,0,375,376,3,12,6,0,376,377,
+  	5,55,0,0,377,385,1,0,0,0,378,379,5,27,0,0,379,380,5,31,0,0,380,381,5,
+  	54,0,0,381,382,3,12,6,0,382,383,5,55,0,0,383,385,1,0,0,0,384,328,1,0,
+  	0,0,384,331,1,0,0,0,384,336,1,0,0,0,384,341,1,0,0,0,384,346,1,0,0,0,384,
+  	351,1,0,0,0,384,357,1,0,0,0,384,359,1,0,0,0,384,362,1,0,0,0,384,367,1,
+  	0,0,0,384,373,1,0,0,0,384,378,1,0,0,0,384,385,1,0,0,0,385,387,1,0,0,0,
+  	386,316,1,0,0,0,386,321,1,0,0,0,386,327,1,0,0,0,387,57,1,0,0,0,388,389,
+  	7,2,0,0,389,59,1,0,0,0,390,395,3,62,31,0,391,392,7,3,0,0,392,394,3,62,
+  	31,0,393,391,1,0,0,0,394,397,1,0,0,0,395,393,1,0,0,0,395,396,1,0,0,0,
+  	396,61,1,0,0,0,397,395,1,0,0,0,398,403,3,64,32,0,399,400,7,4,0,0,400,
+  	402,3,64,32,0,401,399,1,0,0,0,402,405,1,0,0,0,403,401,1,0,0,0,403,404,
+  	1,0,0,0,404,63,1,0,0,0,405,403,1,0,0,0,406,407,5,49,0,0,407,412,3,64,
+  	32,0,408,409,5,50,0,0,409,412,3,64,32,0,410,412,3,66,33,0,411,406,1,0,
+  	0,0,411,408,1,0,0,0,411,410,1,0,0,0,412,65,1,0,0,0,413,426,3,82,41,0,
+  	414,426,3,68,34,0,415,426,3,70,35,0,416,426,3,74,37,0,417,418,5,54,0,
+  	0,418,419,3,12,6,0,419,420,5,55,0,0,420,426,1,0,0,0,421,422,5,54,0,0,
+  	422,423,3,48,24,0,423,424,5,55,0,0,424,426,1,0,0,0,425,413,1,0,0,0,425,
+  	414,1,0,0,0,425,415,1,0,0,0,425,416,1,0,0,0,425,417,1,0,0,0,425,421,1,
+  	0,0,0,426,67,1,0,0,0,427,439,3,84,42,0,428,429,3,84,42,0,429,430,5,57,
+  	0,0,430,431,3,84,42,0,431,439,1,0,0,0,432,433,3,84,42,0,433,434,5,57,
+  	0,0,434,435,3,84,42,0,435,436,5,57,0,0,436,437,3,84,42,0,437,439,1,0,
+  	0,0,438,427,1,0,0,0,438,428,1,0,0,0,438,432,1,0,0,0,439,69,1,0,0,0,440,
+  	441,3,84,42,0,441,443,5,54,0,0,442,444,3,72,36,0,443,442,1,0,0,0,443,
+  	444,1,0,0,0,444,445,1,0,0,0,445,446,5,55,0,0,446,71,1,0,0,0,447,450,5,
+  	51,0,0,448,450,3,80,40,0,449,447,1,0,0,0,449,448,1,0,0,0,450,73,1,0,0,
+  	0,451,453,5,38,0,0,452,454,3,48,24,0,453,452,1,0,0,0,453,454,1,0,0,0,
+  	454,456,1,0,0,0,455,457,3,76,38,0,456,455,1,0,0,0,457,458,1,0,0,0,458,
+  	456,1,0,0,0,458,459,1,0,0,0,459,462,1,0,0,0,460,461,5,41,0,0,461,463,
+  	3,48,24,0,462,460,1,0,0,0,462,463,1,0,0,0,463,464,1,0,0,0,464,465,5,42,
+  	0,0,465,75,1,0,0,0,466,467,5,39,0,0,467,468,3,48,24,0,468,469,5,40,0,
+  	0,469,470,3,48,24,0,470,77,1,0,0,0,471,474,3,80,40,0,472,474,3,12,6,0,
+  	473,471,1,0,0,0,473,472,1,0,0,0,474,79,1,0,0,0,475,480,3,48,24,0,476,
+  	477,5,56,0,0,477,479,3,48,24,0,478,476,1,0,0,0,479,482,1,0,0,0,480,478,
+  	1,0,0,0,480,481,1,0,0,0,481,81,1,0,0,0,482,480,1,0,0,0,483,484,7,5,0,
+  	0,484,83,1,0,0,0,485,486,7,6,0,0,486,85,1,0,0,0,57,92,98,105,110,123,
+  	131,136,144,148,152,155,158,161,164,167,177,180,184,187,195,202,207,210,
+  	216,219,221,224,229,234,238,242,245,256,261,280,285,291,300,308,314,333,
+  	338,343,384,386,395,403,411,425,438,443,449,453,458,462,473,480
   };
   staticData->serializedATN = antlr4::atn::SerializedATNView(serializedATNSegment, sizeof(serializedATNSegment) / sizeof(serializedATNSegment[0]));
 
@@ -1205,6 +1209,7 @@ MiniSQLParser::SelectListContext* MiniSQLParser::selectList() {
       }
 
       case MiniSQLParser::NOT:
+      case MiniSQLParser::EXISTS:
       case MiniSQLParser::NULL_:
       case MiniSQLParser::TRUE:
       case MiniSQLParser::FALSE:
@@ -2650,35 +2655,25 @@ MiniSQLParser::NotExpressionContext* MiniSQLParser::notExpression() {
   try {
     setState(314);
     _errHandler->sync(this);
-    switch (_input->LA(1)) {
-      case MiniSQLParser::NOT: {
-        enterOuterAlt(_localctx, 1);
-        setState(311);
-        match(MiniSQLParser::NOT);
-        setState(312);
-        notExpression();
-        break;
-      }
+    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 39, _ctx)) {
+    case 1: {
+      enterOuterAlt(_localctx, 1);
+      setState(311);
+      match(MiniSQLParser::NOT);
+      setState(312);
+      notExpression();
+      break;
+    }
 
-      case MiniSQLParser::NULL_:
-      case MiniSQLParser::TRUE:
-      case MiniSQLParser::FALSE:
-      case MiniSQLParser::CASE:
-      case MiniSQLParser::PLUS:
-      case MiniSQLParser::MINUS:
-      case MiniSQLParser::LPAREN:
-      case MiniSQLParser::NUMBER:
-      case MiniSQLParser::STRING:
-      case MiniSQLParser::QUOTED_IDENTIFIER:
-      case MiniSQLParser::IDENTIFIER: {
-        enterOuterAlt(_localctx, 2);
-        setState(313);
-        comparisonExpression();
-        break;
-      }
+    case 2: {
+      enterOuterAlt(_localctx, 2);
+      setState(313);
+      comparisonExpression();
+      break;
+    }
 
     default:
-      throw NoViableAltException(this);
+      break;
     }
    
   }
@@ -2695,6 +2690,26 @@ MiniSQLParser::NotExpressionContext* MiniSQLParser::notExpression() {
 
 MiniSQLParser::ComparisonExpressionContext::ComparisonExpressionContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::EXISTS() {
+  return getToken(MiniSQLParser::EXISTS, 0);
+}
+
+tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::LPAREN() {
+  return getToken(MiniSQLParser::LPAREN, 0);
+}
+
+MiniSQLParser::QueryExpressionContext* MiniSQLParser::ComparisonExpressionContext::queryExpression() {
+  return getRuleContext<MiniSQLParser::QueryExpressionContext>(0);
+}
+
+tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::RPAREN() {
+  return getToken(MiniSQLParser::RPAREN, 0);
+}
+
+tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::NOT() {
+  return getToken(MiniSQLParser::NOT, 0);
 }
 
 std::vector<MiniSQLParser::AdditiveExpressionContext *> MiniSQLParser::ComparisonExpressionContext::additiveExpression() {
@@ -2729,20 +2744,8 @@ tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::IN() {
   return getToken(MiniSQLParser::IN, 0);
 }
 
-tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::LPAREN() {
-  return getToken(MiniSQLParser::LPAREN, 0);
-}
-
 MiniSQLParser::InExpressionContext* MiniSQLParser::ComparisonExpressionContext::inExpression() {
   return getRuleContext<MiniSQLParser::InExpressionContext>(0);
-}
-
-tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::RPAREN() {
-  return getToken(MiniSQLParser::RPAREN, 0);
-}
-
-tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::NOT() {
-  return getToken(MiniSQLParser::NOT, 0);
 }
 
 tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::LIKE() {
@@ -2755,14 +2758,6 @@ tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::BETWEEN() {
 
 tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::AND() {
   return getToken(MiniSQLParser::AND, 0);
-}
-
-tree::TerminalNode* MiniSQLParser::ComparisonExpressionContext::EXISTS() {
-  return getToken(MiniSQLParser::EXISTS, 0);
-}
-
-MiniSQLParser::QueryExpressionContext* MiniSQLParser::ComparisonExpressionContext::queryExpression() {
-  return getRuleContext<MiniSQLParser::QueryExpressionContext>(0);
 }
 
 
@@ -2795,167 +2790,215 @@ MiniSQLParser::ComparisonExpressionContext* MiniSQLParser::comparisonExpression(
     exitRule();
   });
   try {
-    enterOuterAlt(_localctx, 1);
-    setState(316);
-    additiveExpression();
-    setState(373);
+    setState(386);
     _errHandler->sync(this);
+    switch (_input->LA(1)) {
+      case MiniSQLParser::EXISTS: {
+        enterOuterAlt(_localctx, 1);
+        setState(316);
+        match(MiniSQLParser::EXISTS);
+        setState(317);
+        match(MiniSQLParser::LPAREN);
+        setState(318);
+        queryExpression();
+        setState(319);
+        match(MiniSQLParser::RPAREN);
+        break;
+      }
 
-    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 43, _ctx)) {
-    case 1: {
-      setState(317);
-      comparisonOperator();
-      setState(318);
-      additiveExpression();
-      break;
-    }
-
-    case 2: {
-      setState(320);
-      match(MiniSQLParser::IS);
-      setState(322);
-      _errHandler->sync(this);
-
-      _la = _input->LA(1);
-      if (_la == MiniSQLParser::NOT) {
+      case MiniSQLParser::NOT: {
+        enterOuterAlt(_localctx, 2);
         setState(321);
         match(MiniSQLParser::NOT);
+        setState(322);
+        match(MiniSQLParser::EXISTS);
+        setState(323);
+        match(MiniSQLParser::LPAREN);
+        setState(324);
+        queryExpression();
+        setState(325);
+        match(MiniSQLParser::RPAREN);
+        break;
       }
-      setState(324);
-      match(MiniSQLParser::NULL_);
-      break;
-    }
 
-    case 3: {
-      setState(325);
-      match(MiniSQLParser::IS);
-      setState(327);
-      _errHandler->sync(this);
+      case MiniSQLParser::NULL_:
+      case MiniSQLParser::TRUE:
+      case MiniSQLParser::FALSE:
+      case MiniSQLParser::CASE:
+      case MiniSQLParser::PLUS:
+      case MiniSQLParser::MINUS:
+      case MiniSQLParser::LPAREN:
+      case MiniSQLParser::NUMBER:
+      case MiniSQLParser::STRING:
+      case MiniSQLParser::QUOTED_IDENTIFIER:
+      case MiniSQLParser::IDENTIFIER: {
+        enterOuterAlt(_localctx, 3);
+        setState(327);
+        additiveExpression();
+        setState(384);
+        _errHandler->sync(this);
 
-      _la = _input->LA(1);
-      if (_la == MiniSQLParser::NOT) {
-        setState(326);
-        match(MiniSQLParser::NOT);
+        switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 43, _ctx)) {
+        case 1: {
+          setState(328);
+          comparisonOperator();
+          setState(329);
+          additiveExpression();
+          break;
+        }
+
+        case 2: {
+          setState(331);
+          match(MiniSQLParser::IS);
+          setState(333);
+          _errHandler->sync(this);
+
+          _la = _input->LA(1);
+          if (_la == MiniSQLParser::NOT) {
+            setState(332);
+            match(MiniSQLParser::NOT);
+          }
+          setState(335);
+          match(MiniSQLParser::NULL_);
+          break;
+        }
+
+        case 3: {
+          setState(336);
+          match(MiniSQLParser::IS);
+          setState(338);
+          _errHandler->sync(this);
+
+          _la = _input->LA(1);
+          if (_la == MiniSQLParser::NOT) {
+            setState(337);
+            match(MiniSQLParser::NOT);
+          }
+          setState(340);
+          match(MiniSQLParser::TRUE);
+          break;
+        }
+
+        case 4: {
+          setState(341);
+          match(MiniSQLParser::IS);
+          setState(343);
+          _errHandler->sync(this);
+
+          _la = _input->LA(1);
+          if (_la == MiniSQLParser::NOT) {
+            setState(342);
+            match(MiniSQLParser::NOT);
+          }
+          setState(345);
+          match(MiniSQLParser::FALSE);
+          break;
+        }
+
+        case 5: {
+          setState(346);
+          match(MiniSQLParser::IN);
+          setState(347);
+          match(MiniSQLParser::LPAREN);
+          setState(348);
+          inExpression();
+          setState(349);
+          match(MiniSQLParser::RPAREN);
+          break;
+        }
+
+        case 6: {
+          setState(351);
+          match(MiniSQLParser::NOT);
+          setState(352);
+          match(MiniSQLParser::IN);
+          setState(353);
+          match(MiniSQLParser::LPAREN);
+          setState(354);
+          inExpression();
+          setState(355);
+          match(MiniSQLParser::RPAREN);
+          break;
+        }
+
+        case 7: {
+          setState(357);
+          match(MiniSQLParser::LIKE);
+          setState(358);
+          additiveExpression();
+          break;
+        }
+
+        case 8: {
+          setState(359);
+          match(MiniSQLParser::NOT);
+          setState(360);
+          match(MiniSQLParser::LIKE);
+          setState(361);
+          additiveExpression();
+          break;
+        }
+
+        case 9: {
+          setState(362);
+          match(MiniSQLParser::BETWEEN);
+          setState(363);
+          additiveExpression();
+          setState(364);
+          match(MiniSQLParser::AND);
+          setState(365);
+          additiveExpression();
+          break;
+        }
+
+        case 10: {
+          setState(367);
+          match(MiniSQLParser::NOT);
+          setState(368);
+          match(MiniSQLParser::BETWEEN);
+          setState(369);
+          additiveExpression();
+          setState(370);
+          match(MiniSQLParser::AND);
+          setState(371);
+          additiveExpression();
+          break;
+        }
+
+        case 11: {
+          setState(373);
+          match(MiniSQLParser::EXISTS);
+          setState(374);
+          match(MiniSQLParser::LPAREN);
+          setState(375);
+          queryExpression();
+          setState(376);
+          match(MiniSQLParser::RPAREN);
+          break;
+        }
+
+        case 12: {
+          setState(378);
+          match(MiniSQLParser::NOT);
+          setState(379);
+          match(MiniSQLParser::EXISTS);
+          setState(380);
+          match(MiniSQLParser::LPAREN);
+          setState(381);
+          queryExpression();
+          setState(382);
+          match(MiniSQLParser::RPAREN);
+          break;
+        }
+
+        default:
+          break;
+        }
+        break;
       }
-      setState(329);
-      match(MiniSQLParser::TRUE);
-      break;
-    }
-
-    case 4: {
-      setState(330);
-      match(MiniSQLParser::IS);
-      setState(332);
-      _errHandler->sync(this);
-
-      _la = _input->LA(1);
-      if (_la == MiniSQLParser::NOT) {
-        setState(331);
-        match(MiniSQLParser::NOT);
-      }
-      setState(334);
-      match(MiniSQLParser::FALSE);
-      break;
-    }
-
-    case 5: {
-      setState(335);
-      match(MiniSQLParser::IN);
-      setState(336);
-      match(MiniSQLParser::LPAREN);
-      setState(337);
-      inExpression();
-      setState(338);
-      match(MiniSQLParser::RPAREN);
-      break;
-    }
-
-    case 6: {
-      setState(340);
-      match(MiniSQLParser::NOT);
-      setState(341);
-      match(MiniSQLParser::IN);
-      setState(342);
-      match(MiniSQLParser::LPAREN);
-      setState(343);
-      inExpression();
-      setState(344);
-      match(MiniSQLParser::RPAREN);
-      break;
-    }
-
-    case 7: {
-      setState(346);
-      match(MiniSQLParser::LIKE);
-      setState(347);
-      additiveExpression();
-      break;
-    }
-
-    case 8: {
-      setState(348);
-      match(MiniSQLParser::NOT);
-      setState(349);
-      match(MiniSQLParser::LIKE);
-      setState(350);
-      additiveExpression();
-      break;
-    }
-
-    case 9: {
-      setState(351);
-      match(MiniSQLParser::BETWEEN);
-      setState(352);
-      additiveExpression();
-      setState(353);
-      match(MiniSQLParser::AND);
-      setState(354);
-      additiveExpression();
-      break;
-    }
-
-    case 10: {
-      setState(356);
-      match(MiniSQLParser::NOT);
-      setState(357);
-      match(MiniSQLParser::BETWEEN);
-      setState(358);
-      additiveExpression();
-      setState(359);
-      match(MiniSQLParser::AND);
-      setState(360);
-      additiveExpression();
-      break;
-    }
-
-    case 11: {
-      setState(362);
-      match(MiniSQLParser::EXISTS);
-      setState(363);
-      match(MiniSQLParser::LPAREN);
-      setState(364);
-      queryExpression();
-      setState(365);
-      match(MiniSQLParser::RPAREN);
-      break;
-    }
-
-    case 12: {
-      setState(367);
-      match(MiniSQLParser::NOT);
-      setState(368);
-      match(MiniSQLParser::EXISTS);
-      setState(369);
-      match(MiniSQLParser::LPAREN);
-      setState(370);
-      queryExpression();
-      setState(371);
-      match(MiniSQLParser::RPAREN);
-      break;
-    }
 
     default:
-      break;
+      throw NoViableAltException(this);
     }
    
   }
@@ -3029,7 +3072,7 @@ MiniSQLParser::ComparisonOperatorContext* MiniSQLParser::comparisonOperator() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(375);
+    setState(388);
     _la = _input->LA(1);
     if (!((((_la & ~ 0x3fULL) == 0) &&
       ((1ULL << _la) & 554153860399104) != 0))) {
@@ -3111,15 +3154,15 @@ MiniSQLParser::AdditiveExpressionContext* MiniSQLParser::additiveExpression() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(377);
+    setState(390);
     multiplicativeExpression();
-    setState(382);
+    setState(395);
     _errHandler->sync(this);
     _la = _input->LA(1);
     while (_la == MiniSQLParser::PLUS
 
     || _la == MiniSQLParser::MINUS) {
-      setState(378);
+      setState(391);
       _la = _input->LA(1);
       if (!(_la == MiniSQLParser::PLUS
 
@@ -3130,9 +3173,9 @@ MiniSQLParser::AdditiveExpressionContext* MiniSQLParser::additiveExpression() {
         _errHandler->reportMatch(this);
         consume();
       }
-      setState(379);
+      setState(392);
       multiplicativeExpression();
-      setState(384);
+      setState(397);
       _errHandler->sync(this);
       _la = _input->LA(1);
     }
@@ -3216,14 +3259,14 @@ MiniSQLParser::MultiplicativeExpressionContext* MiniSQLParser::multiplicativeExp
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(385);
+    setState(398);
     unaryExpression();
-    setState(390);
+    setState(403);
     _errHandler->sync(this);
     _la = _input->LA(1);
     while ((((_la & ~ 0x3fULL) == 0) &&
       ((1ULL << _la) & 15762598695796736) != 0)) {
-      setState(386);
+      setState(399);
       _la = _input->LA(1);
       if (!((((_la & ~ 0x3fULL) == 0) &&
         ((1ULL << _la) & 15762598695796736) != 0))) {
@@ -3233,9 +3276,9 @@ MiniSQLParser::MultiplicativeExpressionContext* MiniSQLParser::multiplicativeExp
         _errHandler->reportMatch(this);
         consume();
       }
-      setState(387);
+      setState(400);
       unaryExpression();
-      setState(392);
+      setState(405);
       _errHandler->sync(this);
       _la = _input->LA(1);
     }
@@ -3301,23 +3344,23 @@ MiniSQLParser::UnaryExpressionContext* MiniSQLParser::unaryExpression() {
     exitRule();
   });
   try {
-    setState(398);
+    setState(411);
     _errHandler->sync(this);
     switch (_input->LA(1)) {
       case MiniSQLParser::PLUS: {
         enterOuterAlt(_localctx, 1);
-        setState(393);
+        setState(406);
         match(MiniSQLParser::PLUS);
-        setState(394);
+        setState(407);
         unaryExpression();
         break;
       }
 
       case MiniSQLParser::MINUS: {
         enterOuterAlt(_localctx, 2);
-        setState(395);
+        setState(408);
         match(MiniSQLParser::MINUS);
-        setState(396);
+        setState(409);
         unaryExpression();
         break;
       }
@@ -3332,7 +3375,7 @@ MiniSQLParser::UnaryExpressionContext* MiniSQLParser::unaryExpression() {
       case MiniSQLParser::QUOTED_IDENTIFIER:
       case MiniSQLParser::IDENTIFIER: {
         enterOuterAlt(_localctx, 3);
-        setState(397);
+        setState(410);
         primaryExpression();
         break;
       }
@@ -3377,16 +3420,16 @@ tree::TerminalNode* MiniSQLParser::PrimaryExpressionContext::LPAREN() {
   return getToken(MiniSQLParser::LPAREN, 0);
 }
 
-MiniSQLParser::ExpressionContext* MiniSQLParser::PrimaryExpressionContext::expression() {
-  return getRuleContext<MiniSQLParser::ExpressionContext>(0);
+MiniSQLParser::QueryExpressionContext* MiniSQLParser::PrimaryExpressionContext::queryExpression() {
+  return getRuleContext<MiniSQLParser::QueryExpressionContext>(0);
 }
 
 tree::TerminalNode* MiniSQLParser::PrimaryExpressionContext::RPAREN() {
   return getToken(MiniSQLParser::RPAREN, 0);
 }
 
-MiniSQLParser::QueryExpressionContext* MiniSQLParser::PrimaryExpressionContext::queryExpression() {
-  return getRuleContext<MiniSQLParser::QueryExpressionContext>(0);
+MiniSQLParser::ExpressionContext* MiniSQLParser::PrimaryExpressionContext::expression() {
+  return getRuleContext<MiniSQLParser::ExpressionContext>(0);
 }
 
 
@@ -3418,55 +3461,55 @@ MiniSQLParser::PrimaryExpressionContext* MiniSQLParser::primaryExpression() {
     exitRule();
   });
   try {
-    setState(412);
+    setState(425);
     _errHandler->sync(this);
-    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 47, _ctx)) {
+    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 48, _ctx)) {
     case 1: {
       enterOuterAlt(_localctx, 1);
-      setState(400);
+      setState(413);
       literal();
       break;
     }
 
     case 2: {
       enterOuterAlt(_localctx, 2);
-      setState(401);
+      setState(414);
       columnReference();
       break;
     }
 
     case 3: {
       enterOuterAlt(_localctx, 3);
-      setState(402);
+      setState(415);
       functionCall();
       break;
     }
 
     case 4: {
       enterOuterAlt(_localctx, 4);
-      setState(403);
+      setState(416);
       caseExpression();
       break;
     }
 
     case 5: {
       enterOuterAlt(_localctx, 5);
-      setState(404);
+      setState(417);
       match(MiniSQLParser::LPAREN);
-      setState(405);
-      expression();
-      setState(406);
+      setState(418);
+      queryExpression();
+      setState(419);
       match(MiniSQLParser::RPAREN);
       break;
     }
 
     case 6: {
       enterOuterAlt(_localctx, 6);
-      setState(408);
+      setState(421);
       match(MiniSQLParser::LPAREN);
-      setState(409);
-      queryExpression();
-      setState(410);
+      setState(422);
+      expression();
+      setState(423);
       match(MiniSQLParser::RPAREN);
       break;
     }
@@ -3536,38 +3579,38 @@ MiniSQLParser::ColumnReferenceContext* MiniSQLParser::columnReference() {
     exitRule();
   });
   try {
-    setState(425);
+    setState(438);
     _errHandler->sync(this);
-    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 48, _ctx)) {
+    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 49, _ctx)) {
     case 1: {
       enterOuterAlt(_localctx, 1);
-      setState(414);
+      setState(427);
       identifier();
       break;
     }
 
     case 2: {
       enterOuterAlt(_localctx, 2);
-      setState(415);
+      setState(428);
       identifier();
-      setState(416);
+      setState(429);
       match(MiniSQLParser::DOT);
-      setState(417);
+      setState(430);
       identifier();
       break;
     }
 
     case 3: {
       enterOuterAlt(_localctx, 3);
-      setState(419);
+      setState(432);
       identifier();
-      setState(420);
+      setState(433);
       match(MiniSQLParser::DOT);
-      setState(421);
+      setState(434);
       identifier();
-      setState(422);
+      setState(435);
       match(MiniSQLParser::DOT);
-      setState(423);
+      setState(436);
       identifier();
       break;
     }
@@ -3639,20 +3682,20 @@ MiniSQLParser::FunctionCallContext* MiniSQLParser::functionCall() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(427);
+    setState(440);
     identifier();
-    setState(428);
+    setState(441);
     match(MiniSQLParser::LPAREN);
-    setState(430);
+    setState(443);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
     if ((((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 4345411025600774144) != 0)) {
-      setState(429);
+      ((1ULL << _la) & 4345411027748257792) != 0)) {
+      setState(442);
       functionArguments();
     }
-    setState(432);
+    setState(445);
     match(MiniSQLParser::RPAREN);
    
   }
@@ -3708,17 +3751,18 @@ MiniSQLParser::FunctionArgumentsContext* MiniSQLParser::functionArguments() {
     exitRule();
   });
   try {
-    setState(436);
+    setState(449);
     _errHandler->sync(this);
     switch (_input->LA(1)) {
       case MiniSQLParser::STAR: {
         enterOuterAlt(_localctx, 1);
-        setState(434);
+        setState(447);
         match(MiniSQLParser::STAR);
         break;
       }
 
       case MiniSQLParser::NOT:
+      case MiniSQLParser::EXISTS:
       case MiniSQLParser::NULL_:
       case MiniSQLParser::TRUE:
       case MiniSQLParser::FALSE:
@@ -3731,7 +3775,7 @@ MiniSQLParser::FunctionArgumentsContext* MiniSQLParser::functionArguments() {
       case MiniSQLParser::QUOTED_IDENTIFIER:
       case MiniSQLParser::IDENTIFIER: {
         enterOuterAlt(_localctx, 2);
-        setState(435);
+        setState(448);
         expressionList();
         break;
       }
@@ -3815,38 +3859,38 @@ MiniSQLParser::CaseExpressionContext* MiniSQLParser::caseExpression() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(438);
+    setState(451);
     match(MiniSQLParser::CASE);
-    setState(440);
+    setState(453);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
     if ((((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 4343159225787088896) != 0)) {
-      setState(439);
+      ((1ULL << _la) & 4343159227934572544) != 0)) {
+      setState(452);
       expression();
     }
-    setState(443); 
+    setState(456); 
     _errHandler->sync(this);
     _la = _input->LA(1);
     do {
-      setState(442);
+      setState(455);
       whenClause();
-      setState(445); 
+      setState(458); 
       _errHandler->sync(this);
       _la = _input->LA(1);
     } while (_la == MiniSQLParser::WHEN);
-    setState(449);
+    setState(462);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
     if (_la == MiniSQLParser::ELSE) {
-      setState(447);
+      setState(460);
       match(MiniSQLParser::ELSE);
-      setState(448);
+      setState(461);
       expression();
     }
-    setState(451);
+    setState(464);
     match(MiniSQLParser::END);
    
   }
@@ -3911,13 +3955,13 @@ MiniSQLParser::WhenClauseContext* MiniSQLParser::whenClause() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(453);
+    setState(466);
     match(MiniSQLParser::WHEN);
-    setState(454);
+    setState(467);
     expression();
-    setState(455);
+    setState(468);
     match(MiniSQLParser::THEN);
-    setState(456);
+    setState(469);
     expression();
    
   }
@@ -3973,19 +4017,19 @@ MiniSQLParser::InExpressionContext* MiniSQLParser::inExpression() {
     exitRule();
   });
   try {
-    setState(460);
+    setState(473);
     _errHandler->sync(this);
-    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 54, _ctx)) {
+    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 55, _ctx)) {
     case 1: {
       enterOuterAlt(_localctx, 1);
-      setState(458);
+      setState(471);
       expressionList();
       break;
     }
 
     case 2: {
       enterOuterAlt(_localctx, 2);
-      setState(459);
+      setState(472);
       queryExpression();
       break;
     }
@@ -4057,17 +4101,17 @@ MiniSQLParser::ExpressionListContext* MiniSQLParser::expressionList() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(462);
+    setState(475);
     expression();
-    setState(467);
+    setState(480);
     _errHandler->sync(this);
     _la = _input->LA(1);
     while (_la == MiniSQLParser::COMMA) {
-      setState(463);
+      setState(476);
       match(MiniSQLParser::COMMA);
-      setState(464);
+      setState(477);
       expression();
-      setState(469);
+      setState(482);
       _errHandler->sync(this);
       _la = _input->LA(1);
     }
@@ -4139,7 +4183,7 @@ MiniSQLParser::LiteralContext* MiniSQLParser::literal() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(470);
+    setState(483);
     _la = _input->LA(1);
     if (!((((_la & ~ 0x3fULL) == 0) &&
       ((1ULL << _la) & 864691188584677376) != 0))) {
@@ -4205,7 +4249,7 @@ MiniSQLParser::IdentifierContext* MiniSQLParser::identifier() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(472);
+    setState(485);
     _la = _input->LA(1);
     if (!(_la == MiniSQLParser::QUOTED_IDENTIFIER
 

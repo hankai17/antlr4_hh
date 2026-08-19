@@ -558,6 +558,11 @@ public:
   public:
     ComparisonExpressionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *EXISTS();
+    antlr4::tree::TerminalNode *LPAREN();
+    QueryExpressionContext *queryExpression();
+    antlr4::tree::TerminalNode *RPAREN();
+    antlr4::tree::TerminalNode *NOT();
     std::vector<AdditiveExpressionContext *> additiveExpression();
     AdditiveExpressionContext* additiveExpression(size_t i);
     ComparisonOperatorContext *comparisonOperator();
@@ -566,15 +571,10 @@ public:
     antlr4::tree::TerminalNode *TRUE();
     antlr4::tree::TerminalNode *FALSE();
     antlr4::tree::TerminalNode *IN();
-    antlr4::tree::TerminalNode *LPAREN();
     InExpressionContext *inExpression();
-    antlr4::tree::TerminalNode *RPAREN();
-    antlr4::tree::TerminalNode *NOT();
     antlr4::tree::TerminalNode *LIKE();
     antlr4::tree::TerminalNode *BETWEEN();
     antlr4::tree::TerminalNode *AND();
-    antlr4::tree::TerminalNode *EXISTS();
-    QueryExpressionContext *queryExpression();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -664,9 +664,9 @@ public:
     FunctionCallContext *functionCall();
     CaseExpressionContext *caseExpression();
     antlr4::tree::TerminalNode *LPAREN();
-    ExpressionContext *expression();
-    antlr4::tree::TerminalNode *RPAREN();
     QueryExpressionContext *queryExpression();
+    antlr4::tree::TerminalNode *RPAREN();
+    ExpressionContext *expression();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;

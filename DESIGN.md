@@ -34,7 +34,10 @@ Fast Path           廉价预筛（yanshi 状态机 / 子串扫描）
    | 无命中 -> ALLOW（不进入重解析，性能关键路径）
    | 命中
    v
-SQL Parser          ANTLR4 + MiniSQL.g4（复杂 CFG、SQL 结构解析）
+SQL Parser          ANTLR4 + MiniSQL.g4（完整 SQL 解析）
+   | 解析失败
+   v
+Fragment Parser     容错词法 + 片段解析（引号不平衡也能产出 AST）
    |
    v
 AST                 语义中间层（规则唯一可见的数据）
@@ -128,15 +131,29 @@ nodePattern: IDENT '(' patternArgList? ')'
 patternArg : IDENT '=' STRING
            | IDENT '=' BOOL
            | IDENT '=' nodePattern
+           | IDENT '.' IDENT '=' IDENT '.' IDENT   // 属性路径等值
 ```
+
+一条规则可以有多个 `patternDef`（`patternDef+`），语义为**或（OR）**，
+对应 yanshi 规则文件里的多分支 export（如 `1sqli_boolean` 覆盖
+`OR/AND × 左/右分支` 四种形状）。
 
 ### 4.2 模式语义
 
 - `KindName(...)`：全树搜索 `kind == KindName` 的节点（隐式 any 语义）。
 - `attr = "value"`：标量属性**相等**。
 - `role = Pattern`：该语义角色子节点存在且递归匹配，如 `left = Constant(value = "1")`。
+- `role.attr = role.attr`：**跨节点属性比较**，如 `left.value = right.value`
+  表示"左子节点与右子节点的 value 属性相等"——把规则从"字面值绑定"
+  升级为"语义条件"的关键谓词。
 - `contains = "sub"`：特殊谓词，对 Text 节点 `value` 属性做子串包含（raw 画像）。
 - 命中任一节点即算规则命中；规则引擎对整棵 AST 深度优先遍历。
+
+数字字面量在 AST 构建时做了规范化（`1` / `1.0` / `1.00` -> `"1"`），
+因此 `1 = 1.0` 与 `1 = 1` 是同一语义。
+
+子查询 `Select` 节点带 `subquery=true` 属性（`(SELECT ...)`、`IN (SELECT ...)`、
+`EXISTS (SELECT ...)` 等上下文），便于精确匹配子查询注入。
 
 ### 4.3 示例
 
@@ -155,12 +172,17 @@ rule sleep {
 ```
 rule always_true {
     severity: HIGH
-    description: "恒真条件：WHERE 1=1"
+    description: "恒真条件：两侧等值常量（1=1 / 2=2 / 1=1.0）"
     pattern: BinaryExpr(op = "=",
-                        left = Constant(value = "1"),
-                        right = Constant(value = "1"))
+                        left = Constant(type = "NUMBER"),
+                        right = Constant(type = "NUMBER"),
+                        left.value = right.value)
 }
 ```
+
+`left.value = right.value` 表达"两侧常量**语义相等**"：`1=1`、`2=2`、
+`1=1.0` 命中；`id=1`、`1=2` 不命中。字符串变体同理
+（`rules/sqli/string_tautology.g4`，`'a'='a'` 命中、`name='admin'` 不命中）。
 
 `rules/xss/script_tag.g4`（raw 画像，不经过 SQL 解析）：
 
@@ -238,7 +260,9 @@ ANTLR 适合复杂 CFG，但逐请求跑完整解析在高压下成本偏高。�
 ├── waf.cc                # 主引擎：Normalization/FastPath/Parser/AST/RuleEngine
 ├── rules/
 │   ├── sqli/always_true.g4  union_select.g4  sleep.g4  load_file.g4
+│   ├── sqli_rules/1sqli_boolean.g4 ... 17sqli_in.g4   # 镜像 yanshi 17 类 SQLi
 │   └── xss/script_tag.g4
+├── validate_sqli.sh      # 规则校验逻辑（正/负样本断言）
 └── build/plugins/*.so    # 编译产物（热加载目录）
 ```
 
@@ -248,18 +272,27 @@ ANTLR 适合复杂 CFG，但逐请求跑完整解析在高压下成本偏高。�
 # 1. 写规则（无需碰 C++）
 vi rules/sqli/benchmark.g4
 
-# 2. 编译（rulec 自动生成 C++ 并出 .so）
-make plugins
+# 2. 编译（rulec 自动生成 C++ 并出 .so；CMake 默认构建即含插件）
+cmake --build build --target plugins
 
 # 3. 引擎热加载生效（原型为每次请求扫描插件目录；生产可做成 inotify 热更）
-./waf --rules build/plugins "SELECT BENCHMARK(1000000, MD5('x'))"
+./build/waf --rules build/plugins "SELECT BENCHMARK(1000000, MD5('x'))"
 ```
+
+（构建：`cmake -S . -B build && cmake --build build -j`；产物 `build/waf`、
+`build/rulec`、`build/plugins/*.so`。语法变更后用
+`cmake --build build --target grammars` 重新生成 ANTLR 解析器。）
 
 ## 10. 已实现原型 vs 生产化差距（Roadmap）
 
 ### 已实现
 - SQL -> AST 语义折叠（AND/OR 左结合、比较/IN/LIKE/BETWEEN/IS NULL/EXISTS、函数、CASE、子查询）
 - Rule.g4 规则语言 + rulec 编译器 + 独立 .so 插件
+- 语义谓词：属性路径等值（`left.value = right.value`）、数字字面量规范化
+- 一条规则多 pattern（OR 分支）、子查询标记（`subquery=true`）、EXISTS 独立表达式
+- 镜像 yanshi sqli_rules 的 17 类 SQLi 规则 + `validate` 校验目标（43 个样本断言）
+- 片段防护：容错词法 + 片段解析器直接构造 AST（不塞完整语句），
+  `1 OR 1=1` / `admin' OR '1'='1'` / `UNION SELECT` 片段均可命中语义规则
 - 主引擎全流水线：Normalization -> Fast Path -> Parser -> AST -> Rule Engine -> Verdict
 - sql / raw 双画像（SQLi 语义检测 + XSS 文本检测）
 - ABI 协商、加载容错、fail-closed 选项、AST 调试输出
@@ -270,9 +303,12 @@ make plugins
 - **yanshi fast path**：子串表替换为 DFA 状态机，特征与规则同源生成。
 - **规则语言扩展**：`regex`、`not`、`count`（如至少 N 个危险函数）、
   跨节点约束（如 `BinaryExpr(op=OR)` 下同时出现两个恒真项）、
-  白名单 action 语义、规则依赖/优先级。
+  白名单 action 语义、规则依赖/优先级；**常量折叠**（`1+1=2`、`0*1=0`
+  等算术恒真需在 AST 层做常量表达式求值，当前是已知缺口）。
 - **AST 覆盖面**：JOIN 语义、CTE、`BENCHMARK` 等更多函数族、
   XSS 走 HTML parser（`html.g4` -> DOM AST），RCE 走 shell/表达式解析器。
+- **生产级容错词法**：已实现基础容错（引号不平衡、未知字符跳过）；
+  生产仍需 libinjection 级能力：charset/双重编码、嵌套引号、MySQL 注释变体等。
 - **插件治理**：插件签名校验（防投毒 .so）、沙箱/受限编译选项、
   插件元数据版本、性能预算（超时/调用次数上限）。
 - **运行时形态**：常驻服务 + 请求上下文传递、规则热更（inotify）、

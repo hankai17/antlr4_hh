@@ -55,38 +55,41 @@ void ruleParserInitialize() {
       "patternArg"
     },
     std::vector<std::string>{
-      "", "'{'", "'}'", "':'", "'('", "')'", "','", "'='", "'rule'", "'severity'", 
-      "'action'", "'profile'", "'description'", "'pattern'"
+      "", "'{'", "'}'", "':'", "'('", "')'", "','", "'rule'", "'severity'", 
+      "'action'", "'profile'", "'description'", "'pattern'", "'='", "'.'"
     },
     std::vector<std::string>{
-      "", "", "", "", "", "", "", "", "RULE", "SEVERITY_KW", "ACTION_KW", 
-      "PROFILE_KW", "DESCRIPTION_KW", "PATTERN_KW", "SEVERITY", "ACTION", 
+      "", "", "", "", "", "", "", "RULE", "SEVERITY_KW", "ACTION_KW", "PROFILE_KW", 
+      "DESCRIPTION_KW", "PATTERN_KW", "EQ", "DOT", "SEVERITY", "ACTION", 
       "PROFILE", "BOOL", "IDENT", "STRING", "WS", "LINE_COMMENT", "BLOCK_COMMENT"
     }
   );
   static const int32_t serializedATNSegment[] = {
-  	4,1,22,76,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,1,0,
+  	4,1,23,87,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,1,0,
   	4,0,16,8,0,11,0,12,0,17,1,1,1,1,1,1,1,1,5,1,24,8,1,10,1,12,1,27,9,1,1,
-  	1,1,1,1,1,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,3,2,44,8,2,
-  	1,3,1,3,1,3,1,3,1,4,1,4,1,4,3,4,53,8,4,1,4,1,4,1,5,1,5,1,5,5,5,60,8,5,
-  	10,5,12,5,63,9,5,1,6,1,6,1,6,1,6,1,6,1,6,1,6,1,6,1,6,3,6,74,8,6,1,6,0,
-  	0,7,0,2,4,6,8,10,12,0,0,77,0,15,1,0,0,0,2,19,1,0,0,0,4,43,1,0,0,0,6,45,
-  	1,0,0,0,8,49,1,0,0,0,10,56,1,0,0,0,12,73,1,0,0,0,14,16,3,2,1,0,15,14,
-  	1,0,0,0,16,17,1,0,0,0,17,15,1,0,0,0,17,18,1,0,0,0,18,1,1,0,0,0,19,20,
-  	5,8,0,0,20,21,5,18,0,0,21,25,5,1,0,0,22,24,3,4,2,0,23,22,1,0,0,0,24,27,
-  	1,0,0,0,25,23,1,0,0,0,25,26,1,0,0,0,26,28,1,0,0,0,27,25,1,0,0,0,28,29,
-  	3,6,3,0,29,30,5,2,0,0,30,3,1,0,0,0,31,32,5,9,0,0,32,33,5,3,0,0,33,44,
-  	5,14,0,0,34,35,5,10,0,0,35,36,5,3,0,0,36,44,5,15,0,0,37,38,5,11,0,0,38,
-  	39,5,3,0,0,39,44,5,16,0,0,40,41,5,12,0,0,41,42,5,3,0,0,42,44,5,19,0,0,
-  	43,31,1,0,0,0,43,34,1,0,0,0,43,37,1,0,0,0,43,40,1,0,0,0,44,5,1,0,0,0,
-  	45,46,5,13,0,0,46,47,5,3,0,0,47,48,3,8,4,0,48,7,1,0,0,0,49,50,5,18,0,
-  	0,50,52,5,4,0,0,51,53,3,10,5,0,52,51,1,0,0,0,52,53,1,0,0,0,53,54,1,0,
-  	0,0,54,55,5,5,0,0,55,9,1,0,0,0,56,61,3,12,6,0,57,58,5,6,0,0,58,60,3,12,
-  	6,0,59,57,1,0,0,0,60,63,1,0,0,0,61,59,1,0,0,0,61,62,1,0,0,0,62,11,1,0,
-  	0,0,63,61,1,0,0,0,64,65,5,18,0,0,65,66,5,7,0,0,66,74,5,19,0,0,67,68,5,
-  	18,0,0,68,69,5,7,0,0,69,74,5,17,0,0,70,71,5,18,0,0,71,72,5,7,0,0,72,74,
-  	3,8,4,0,73,64,1,0,0,0,73,67,1,0,0,0,73,70,1,0,0,0,74,13,1,0,0,0,6,17,
-  	25,43,52,61,73
+  	1,4,1,30,8,1,11,1,12,1,31,1,1,1,1,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,
+  	1,2,1,2,1,2,3,2,48,8,2,1,3,1,3,1,3,1,3,1,4,1,4,1,4,3,4,57,8,4,1,4,1,4,
+  	1,5,1,5,1,5,5,5,64,8,5,10,5,12,5,67,9,5,1,6,1,6,1,6,1,6,1,6,1,6,1,6,1,
+  	6,1,6,1,6,1,6,1,6,1,6,1,6,1,6,1,6,3,6,85,8,6,1,6,0,0,7,0,2,4,6,8,10,12,
+  	0,0,90,0,15,1,0,0,0,2,19,1,0,0,0,4,47,1,0,0,0,6,49,1,0,0,0,8,53,1,0,0,
+  	0,10,60,1,0,0,0,12,84,1,0,0,0,14,16,3,2,1,0,15,14,1,0,0,0,16,17,1,0,0,
+  	0,17,15,1,0,0,0,17,18,1,0,0,0,18,1,1,0,0,0,19,20,5,7,0,0,20,21,5,19,0,
+  	0,21,25,5,1,0,0,22,24,3,4,2,0,23,22,1,0,0,0,24,27,1,0,0,0,25,23,1,0,0,
+  	0,25,26,1,0,0,0,26,29,1,0,0,0,27,25,1,0,0,0,28,30,3,6,3,0,29,28,1,0,0,
+  	0,30,31,1,0,0,0,31,29,1,0,0,0,31,32,1,0,0,0,32,33,1,0,0,0,33,34,5,2,0,
+  	0,34,3,1,0,0,0,35,36,5,8,0,0,36,37,5,3,0,0,37,48,5,15,0,0,38,39,5,9,0,
+  	0,39,40,5,3,0,0,40,48,5,16,0,0,41,42,5,10,0,0,42,43,5,3,0,0,43,48,5,17,
+  	0,0,44,45,5,11,0,0,45,46,5,3,0,0,46,48,5,20,0,0,47,35,1,0,0,0,47,38,1,
+  	0,0,0,47,41,1,0,0,0,47,44,1,0,0,0,48,5,1,0,0,0,49,50,5,12,0,0,50,51,5,
+  	3,0,0,51,52,3,8,4,0,52,7,1,0,0,0,53,54,5,19,0,0,54,56,5,4,0,0,55,57,3,
+  	10,5,0,56,55,1,0,0,0,56,57,1,0,0,0,57,58,1,0,0,0,58,59,5,5,0,0,59,9,1,
+  	0,0,0,60,65,3,12,6,0,61,62,5,6,0,0,62,64,3,12,6,0,63,61,1,0,0,0,64,67,
+  	1,0,0,0,65,63,1,0,0,0,65,66,1,0,0,0,66,11,1,0,0,0,67,65,1,0,0,0,68,69,
+  	5,19,0,0,69,70,5,13,0,0,70,85,5,20,0,0,71,72,5,19,0,0,72,73,5,13,0,0,
+  	73,85,5,18,0,0,74,75,5,19,0,0,75,76,5,13,0,0,76,85,3,8,4,0,77,78,5,19,
+  	0,0,78,79,5,14,0,0,79,80,5,19,0,0,80,81,5,13,0,0,81,82,5,19,0,0,82,83,
+  	5,14,0,0,83,85,5,19,0,0,84,68,1,0,0,0,84,71,1,0,0,0,84,74,1,0,0,0,84,
+  	77,1,0,0,0,85,13,1,0,0,0,7,17,25,31,47,56,65,84
   };
   staticData->serializedATN = antlr4::atn::SerializedATNView(serializedATNSegment, sizeof(serializedATNSegment) / sizeof(serializedATNSegment[0]));
 
@@ -204,16 +207,20 @@ tree::TerminalNode* RuleParser::RuleDefContext::IDENT() {
   return getToken(RuleParser::IDENT, 0);
 }
 
-RuleParser::PatternDefContext* RuleParser::RuleDefContext::patternDef() {
-  return getRuleContext<RuleParser::PatternDefContext>(0);
-}
-
 std::vector<RuleParser::PropertyContext *> RuleParser::RuleDefContext::property() {
   return getRuleContexts<RuleParser::PropertyContext>();
 }
 
 RuleParser::PropertyContext* RuleParser::RuleDefContext::property(size_t i) {
   return getRuleContext<RuleParser::PropertyContext>(i);
+}
+
+std::vector<RuleParser::PatternDefContext *> RuleParser::RuleDefContext::patternDef() {
+  return getRuleContexts<RuleParser::PatternDefContext>();
+}
+
+RuleParser::PatternDefContext* RuleParser::RuleDefContext::patternDef(size_t i) {
+  return getRuleContext<RuleParser::PatternDefContext>(i);
 }
 
 
@@ -246,16 +253,24 @@ RuleParser::RuleDefContext* RuleParser::ruleDef() {
     _errHandler->sync(this);
     _la = _input->LA(1);
     while ((((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 7680) != 0)) {
+      ((1ULL << _la) & 3840) != 0)) {
       setState(22);
       property();
       setState(27);
       _errHandler->sync(this);
       _la = _input->LA(1);
     }
-    setState(28);
-    patternDef();
-    setState(29);
+    setState(29); 
+    _errHandler->sync(this);
+    _la = _input->LA(1);
+    do {
+      setState(28);
+      patternDef();
+      setState(31); 
+      _errHandler->sync(this);
+      _la = _input->LA(1);
+    } while (_la == RuleParser::PATTERN_KW);
+    setState(33);
     match(RuleParser::T__1);
    
   }
@@ -324,49 +339,49 @@ RuleParser::PropertyContext* RuleParser::property() {
     exitRule();
   });
   try {
-    setState(43);
+    setState(47);
     _errHandler->sync(this);
     switch (_input->LA(1)) {
       case RuleParser::SEVERITY_KW: {
         enterOuterAlt(_localctx, 1);
-        setState(31);
+        setState(35);
         match(RuleParser::SEVERITY_KW);
-        setState(32);
+        setState(36);
         match(RuleParser::T__2);
-        setState(33);
+        setState(37);
         match(RuleParser::SEVERITY);
         break;
       }
 
       case RuleParser::ACTION_KW: {
         enterOuterAlt(_localctx, 2);
-        setState(34);
+        setState(38);
         match(RuleParser::ACTION_KW);
-        setState(35);
+        setState(39);
         match(RuleParser::T__2);
-        setState(36);
+        setState(40);
         match(RuleParser::ACTION);
         break;
       }
 
       case RuleParser::PROFILE_KW: {
         enterOuterAlt(_localctx, 3);
-        setState(37);
+        setState(41);
         match(RuleParser::PROFILE_KW);
-        setState(38);
+        setState(42);
         match(RuleParser::T__2);
-        setState(39);
+        setState(43);
         match(RuleParser::PROFILE);
         break;
       }
 
       case RuleParser::DESCRIPTION_KW: {
         enterOuterAlt(_localctx, 4);
-        setState(40);
+        setState(44);
         match(RuleParser::DESCRIPTION_KW);
-        setState(41);
+        setState(45);
         match(RuleParser::T__2);
-        setState(42);
+        setState(46);
         match(RuleParser::STRING);
         break;
       }
@@ -418,11 +433,11 @@ RuleParser::PatternDefContext* RuleParser::patternDef() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(45);
+    setState(49);
     match(RuleParser::PATTERN_KW);
-    setState(46);
+    setState(50);
     match(RuleParser::T__2);
-    setState(47);
+    setState(51);
     nodePattern();
    
   }
@@ -469,19 +484,19 @@ RuleParser::NodePatternContext* RuleParser::nodePattern() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(49);
+    setState(53);
     match(RuleParser::IDENT);
-    setState(50);
+    setState(54);
     match(RuleParser::T__3);
-    setState(52);
+    setState(56);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
     if (_la == RuleParser::IDENT) {
-      setState(51);
+      setState(55);
       patternArgList();
     }
-    setState(54);
+    setState(58);
     match(RuleParser::T__4);
    
   }
@@ -528,17 +543,17 @@ RuleParser::PatternArgListContext* RuleParser::patternArgList() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(56);
+    setState(60);
     patternArg();
-    setState(61);
+    setState(65);
     _errHandler->sync(this);
     _la = _input->LA(1);
     while (_la == RuleParser::T__5) {
-      setState(57);
+      setState(61);
       match(RuleParser::T__5);
-      setState(58);
+      setState(62);
       patternArg();
-      setState(63);
+      setState(67);
       _errHandler->sync(this);
       _la = _input->LA(1);
     }
@@ -559,8 +574,16 @@ RuleParser::PatternArgContext::PatternArgContext(ParserRuleContext *parent, size
   : ParserRuleContext(parent, invokingState) {
 }
 
-tree::TerminalNode* RuleParser::PatternArgContext::IDENT() {
-  return getToken(RuleParser::IDENT, 0);
+std::vector<tree::TerminalNode *> RuleParser::PatternArgContext::IDENT() {
+  return getTokens(RuleParser::IDENT);
+}
+
+tree::TerminalNode* RuleParser::PatternArgContext::IDENT(size_t i) {
+  return getToken(RuleParser::IDENT, i);
+}
+
+tree::TerminalNode* RuleParser::PatternArgContext::EQ() {
+  return getToken(RuleParser::EQ, 0);
 }
 
 tree::TerminalNode* RuleParser::PatternArgContext::STRING() {
@@ -573,6 +596,14 @@ tree::TerminalNode* RuleParser::PatternArgContext::BOOL() {
 
 RuleParser::NodePatternContext* RuleParser::PatternArgContext::nodePattern() {
   return getRuleContext<RuleParser::NodePatternContext>(0);
+}
+
+std::vector<tree::TerminalNode *> RuleParser::PatternArgContext::DOT() {
+  return getTokens(RuleParser::DOT);
+}
+
+tree::TerminalNode* RuleParser::PatternArgContext::DOT(size_t i) {
+  return getToken(RuleParser::DOT, i);
 }
 
 
@@ -593,39 +624,58 @@ RuleParser::PatternArgContext* RuleParser::patternArg() {
     exitRule();
   });
   try {
-    setState(73);
+    setState(84);
     _errHandler->sync(this);
-    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 5, _ctx)) {
+    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 6, _ctx)) {
     case 1: {
       enterOuterAlt(_localctx, 1);
-      setState(64);
+      setState(68);
       match(RuleParser::IDENT);
-      setState(65);
-      match(RuleParser::T__6);
-      setState(66);
+      setState(69);
+      match(RuleParser::EQ);
+      setState(70);
       match(RuleParser::STRING);
       break;
     }
 
     case 2: {
       enterOuterAlt(_localctx, 2);
-      setState(67);
+      setState(71);
       match(RuleParser::IDENT);
-      setState(68);
-      match(RuleParser::T__6);
-      setState(69);
+      setState(72);
+      match(RuleParser::EQ);
+      setState(73);
       match(RuleParser::BOOL);
       break;
     }
 
     case 3: {
       enterOuterAlt(_localctx, 3);
-      setState(70);
+      setState(74);
       match(RuleParser::IDENT);
-      setState(71);
-      match(RuleParser::T__6);
-      setState(72);
+      setState(75);
+      match(RuleParser::EQ);
+      setState(76);
       nodePattern();
+      break;
+    }
+
+    case 4: {
+      enterOuterAlt(_localctx, 4);
+      setState(77);
+      match(RuleParser::IDENT);
+      setState(78);
+      match(RuleParser::DOT);
+      setState(79);
+      match(RuleParser::IDENT);
+      setState(80);
+      match(RuleParser::EQ);
+      setState(81);
+      match(RuleParser::IDENT);
+      setState(82);
+      match(RuleParser::DOT);
+      setState(83);
+      match(RuleParser::IDENT);
       break;
     }
 

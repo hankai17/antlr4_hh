@@ -12,10 +12,10 @@
 class  RuleParser : public antlr4::Parser {
 public:
   enum {
-    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
-    RULE = 8, SEVERITY_KW = 9, ACTION_KW = 10, PROFILE_KW = 11, DESCRIPTION_KW = 12, 
-    PATTERN_KW = 13, SEVERITY = 14, ACTION = 15, PROFILE = 16, BOOL = 17, 
-    IDENT = 18, STRING = 19, WS = 20, LINE_COMMENT = 21, BLOCK_COMMENT = 22
+    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, RULE = 7, 
+    SEVERITY_KW = 8, ACTION_KW = 9, PROFILE_KW = 10, DESCRIPTION_KW = 11, 
+    PATTERN_KW = 12, EQ = 13, DOT = 14, SEVERITY = 15, ACTION = 16, PROFILE = 17, 
+    BOOL = 18, IDENT = 19, STRING = 20, WS = 21, LINE_COMMENT = 22, BLOCK_COMMENT = 23
   };
 
   enum {
@@ -66,9 +66,10 @@ public:
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *RULE();
     antlr4::tree::TerminalNode *IDENT();
-    PatternDefContext *patternDef();
     std::vector<PropertyContext *> property();
     PropertyContext* property(size_t i);
+    std::vector<PatternDefContext *> patternDef();
+    PatternDefContext* patternDef(size_t i);
 
    
   };
@@ -133,10 +134,14 @@ public:
   public:
     PatternArgContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    antlr4::tree::TerminalNode *IDENT();
+    std::vector<antlr4::tree::TerminalNode *> IDENT();
+    antlr4::tree::TerminalNode* IDENT(size_t i);
+    antlr4::tree::TerminalNode *EQ();
     antlr4::tree::TerminalNode *STRING();
     antlr4::tree::TerminalNode *BOOL();
     NodePatternContext *nodePattern();
+    std::vector<antlr4::tree::TerminalNode *> DOT();
+    antlr4::tree::TerminalNode* DOT(size_t i);
 
    
   };

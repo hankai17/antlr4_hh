@@ -31,7 +31,7 @@ ruleFile
     ;
 
 ruleDef
-    : RULE IDENT '{' property* patternDef '}'
+    : RULE IDENT '{' property* patternDef+ '}'
     ;
 
 property
@@ -54,9 +54,10 @@ patternArgList
     ;
 
 patternArg
-    : IDENT '=' STRING
-    | IDENT '=' BOOL
-    | IDENT '=' nodePattern
+    : IDENT EQ STRING
+    | IDENT EQ BOOL
+    | IDENT EQ nodePattern
+    | IDENT DOT IDENT EQ IDENT DOT IDENT
     ;
 
 
@@ -70,6 +71,9 @@ ACTION_KW       : 'action';
 PROFILE_KW      : 'profile';
 DESCRIPTION_KW  : 'description';
 PATTERN_KW      : 'pattern';
+
+EQ  : '=';
+DOT : '.';
 
 SEVERITY : 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 ACTION   : 'ALLOW' | 'BLOCK';

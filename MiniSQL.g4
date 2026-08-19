@@ -189,7 +189,9 @@ notExpression
     ;
 
 comparisonExpression
-    : additiveExpression
+    : EXISTS LPAREN queryExpression RPAREN
+    | NOT EXISTS LPAREN queryExpression RPAREN
+    | additiveExpression
       (
           comparisonOperator additiveExpression
         | IS NOT? NULL
@@ -246,8 +248,8 @@ primaryExpression
     | columnReference
     | functionCall
     | caseExpression
-    | LPAREN expression RPAREN
     | LPAREN queryExpression RPAREN
+    | LPAREN expression RPAREN
     ;
 
 

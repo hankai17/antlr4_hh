@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
 
 namespace waf {
 
@@ -15,6 +18,17 @@ CompKind comparisonKind(MiniSQLParser::ComparisonExpressionContext* ctx) {
     }
     if (ctx->IS() || ctx->EXISTS()) return CompKind::UNARY;
     return CompKind::NONE;
+}
+
+// 数字字面量规范化：1 / 1.0 / 1.00 -> "1"，保证 1 = 1.0 语义相等。
+// 用 17 位有效数字往返（round-trip）避免精度碰撞。
+std::string canonicalNumber(const std::string& raw) {
+    char* end = nullptr;
+    double v = std::strtod(raw.c_str(), &end);
+    if (end == raw.c_str() || *end != '\0') return raw;  // 解析失败原样返回
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "%.17g", v);
+    return buf;
 }
 
 }  // namespace
@@ -81,10 +95,19 @@ void AstBuilder::enterQueryExpression(MiniSQLParser::QueryExpressionContext* ctx
     if (ctx->queryTerm().size() > 1 && top() && top()->kind == "Query") {
         top()->setAttr("union", "true");
     }
+    // 顶层 queryStatement 下的 queryExpression 以 Query 为父；其余都是子查询上下文。
+    subqueryStack_.push_back(top() && top()->kind != "Query");
+}
+
+void AstBuilder::exitQueryExpression(MiniSQLParser::QueryExpressionContext*) {
+    subqueryStack_.pop_back();
 }
 
 void AstBuilder::enterQuerySpecification(MiniSQLParser::QuerySpecificationContext*) {
     pushNode("Select");
+    if (!subqueryStack_.empty() && subqueryStack_.back()) {
+        top()->setAttr("subquery", "true");
+    }
 }
 
 void AstBuilder::exitQuerySpecification(MiniSQLParser::QuerySpecificationContext*) {
@@ -347,7 +370,7 @@ void AstBuilder::enterLiteral(MiniSQLParser::LiteralContext* ctx) {
     AstNode* n = pushNode("Constant");
     if (ctx->NUMBER()) {
         n->setAttr("type", "NUMBER");
-        n->setAttr("value", ctx->NUMBER()->getText());
+        n->setAttr("value", canonicalNumber(ctx->NUMBER()->getText()));
     } else if (ctx->STRING()) {
         std::string s = ctx->STRING()->getText();
         if (s.size() >= 2 && s.front() == '\'' && s.back() == '\'') {

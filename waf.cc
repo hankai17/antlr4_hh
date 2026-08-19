@@ -5,7 +5,8 @@
 //   HTTP payload
 //     -> Normalization（注释剥离、空白折叠）
 //     -> Fast Path（廉价子串扫描，无命中直接 ALLOW，模拟 yanshi 状态机层）
-//     -> MiniSQL Parser（ANTLR，复杂 CFG / SQL AST 解析）
+//     -> MiniSQL Parser（完整 SQL，ANTLR 解析）
+//     -> Fragment Wrap（不完整 SQL：包装进合法上下文再解析，如 WHERE <payload>）
 //     -> AST（语义中间层，规则不接触 SQL 文本）
 //     -> Rule Engine（dlopen 加载的规则插件逐个 check）
 //     -> ALLOW / BLOCK / UNKNOWN
@@ -28,6 +29,7 @@
 
 #include "ast.h"
 #include "ast_builder.h"
+#include "fragment_parser.h"
 #include "rule_plugin.h"
 
 using namespace antlr4;
@@ -162,8 +164,16 @@ std::vector<LoadedRule> loadRules(const std::string& dir) {
 // ------------------------------------------------------------
 
 const std::vector<std::string> kFastPathTokens = {
-    "union", "sleep(", "load_file", "1=1", "1 = 1", "0x",
-    "<script", "select", "information_schema", "and 1", "or 1",
+    // SQL 关键结构与注入惯用特征（命中才进入深检；无命中直接 ALLOW）
+    "select", "union", "sleep(", "load_file", "benchmark",
+    "information_schema", "0x",
+    // 其他语句类型与堆叠查询
+    "insert ", "update ", "delete ", "drop ", "alter ", "create ", ";",
+    "||", "order by", "limit ",
+    // 恒真 / 布尔盲注惯用词
+    "=", "or ", "and ", "'", "--", "/*",
+    // XSS
+    "<script",
 };
 
 std::vector<std::string> fastPathHit(const std::string& normalized) {
@@ -208,10 +218,21 @@ SqlResult parseSql(const std::string& sql) {
     return res;
 }
 
+// 真实请求大多是"不完整 SQL 片段"（参数值、注入后缀、引号不平衡载荷）。
+// 不再把片段塞进完整语句，而是用容错词法 + 片段解析器直接构造 AST
+// （fragment="true" 标记），语义规则原样复用。
+SqlResult parseSqlFragment(const std::string& frag) {
+    SqlResult res;
+    res.ast = waf::frag::parseFragment(frag);
+    if (res.ast) res.status = ParseStatus::OK;
+    return res;
+}
+
 // raw 画像：把归一化文本包成一个 Text 节点。
+// value 使用小写归一化文本，保证 contains 谓词大小写不敏感；raw 保留原文供日志。
 waf::AstPtr makeTextAst(const std::string& normalized, const std::string& raw) {
     auto root = std::make_unique<waf::AstNode>("Text");
-    root->setAttr("value", normalized);
+    root->setAttr("value", lower(normalized));
     root->setAttr("raw", raw);
     return root;
 }
@@ -286,16 +307,31 @@ int main(int argc, char* argv[]) {
     // 4. Parser -> AST（按规则画像按需构建）
     waf::AstPtr sqlAst;
     ParseStatus sqlStatus = ParseStatus::OK;
+    bool fullSqlOk = false;
     if (needSql) {
         SqlResult r = parseSql(normalized);
+        fullSqlOk = (r.status == ParseStatus::OK);
+        if (!fullSqlOk) {
+            // 容错片段解析：不完整 SQL 直接产出 AST（无需补全成完整语句）。
+            r = parseSqlFragment(normalized);
+            if (r.status == ParseStatus::OK) {
+                std::cout << "SQL PARSE: OK (fragment AST)\n";
+            } else {
+                std::cout << "SQL PARSE: ERROR\n";
+            }
+        } else {
+            std::cout << "SQL PARSE: OK\n";
+        }
         sqlStatus = r.status;
         sqlAst = std::move(r.ast);
-        std::cout << "SQL PARSE: " << (sqlStatus == ParseStatus::OK ? "OK" : "ERROR") << "\n";
         if (dumpAst && sqlAst) std::cout << "SQL AST:\n" << sqlAst->dump();
     }
+    bool sqlOk = (sqlStatus == ParseStatus::OK);
 
     waf::AstPtr textAst;
-    if (needRaw) {
+    // raw 规则作为兜底：仅完整 SQL 解析失败时参与判定（XSS 等非 SQL 载荷）。
+    bool runRaw = needRaw && !fullSqlOk;
+    if (runRaw) {
         textAst = makeTextAst(normalized, payload);
         if (dumpAst) std::cout << "TEXT AST:\n" << textAst->dump();
     }
