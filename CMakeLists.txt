@@ -14,32 +14,45 @@ endif()
 add_compile_options(-Wall -Wextra)
 
 # ------------------------------------------------------------
-# ANTLR4 C++ 运行时（可 -D 覆盖路径）
+# ANTLR4 C++ 运行时
+# find_path/find_library 按 CMake 标准前缀自动搜索
+# （/usr、/usr/local 等）；如需指定安装位置用
+#   cmake -DANTLR4_RUNTIME_DIR=/opt/antlr ...
 # ------------------------------------------------------------
 
-set(ANTLR4_RUNTIME_INC
-    "/root/CLionProjects/antlr4-4.13.2/runtime/Cpp/runtime/src"
-    CACHE PATH "ANTLR4 C++ runtime headers dir")
-set(ANTLR4_RUNTIME_LIB_DIR
-    "/root/CLionProjects/antlr4-4.13.2/runtime/Cpp/build/runtime"
-    CACHE PATH "ANTLR4 C++ runtime library dir")
+set(ANTLR4_RUNTIME_DIR "" CACHE PATH "ANTLR4 C++ runtime install prefix (optional)")
 
-find_path(ANTLR4_RUNTIME_INC_FOUND
-    antlr4-runtime.h
-    HINTS ${ANTLR4_RUNTIME_INC})
-find_library(ANTLR4_RUNTIME_LIB_FOUND
-    antlr4-runtime
-    HINTS ${ANTLR4_RUNTIME_LIB_DIR})
+if(ANTLR4_RUNTIME_DIR)
+    # 显式指定前缀：只在该前缀下查找
+    find_path(ANTLR4_RUNTIME_INC_FOUND
+        antlr4-runtime.h
+        HINTS ${ANTLR4_RUNTIME_DIR}/include
+        PATH_SUFFIXES antlr4-runtime
+        NO_DEFAULT_PATH)
+    find_library(ANTLR4_RUNTIME_LIB_FOUND
+        antlr4-runtime
+        HINTS ${ANTLR4_RUNTIME_DIR}/lib
+        NO_DEFAULT_PATH)
+else()
+    # 默认：按 CMake 标准前缀搜索（/usr、/usr/local 等）
+    find_path(ANTLR4_RUNTIME_INC_FOUND
+        antlr4-runtime.h
+        PATH_SUFFIXES antlr4-runtime)
+    find_library(ANTLR4_RUNTIME_LIB_FOUND antlr4-runtime)
+endif()
 
 if(NOT ANTLR4_RUNTIME_INC_FOUND OR NOT ANTLR4_RUNTIME_LIB_FOUND)
     message(FATAL_ERROR
-        "ANTLR4 C++ runtime not found. Pass -DANTLR4_RUNTIME_INC=... "
-        "and -DANTLR4_RUNTIME_LIB_DIR=...")
+        "ANTLR4 C++ runtime not found under /usr, /usr/local. "
+        "Install it or pass -DANTLR4_RUNTIME_DIR=<prefix>")
 endif()
 
+get_filename_component(ANTLR4_RUNTIME_LIB_DIR_FOUND
+    ${ANTLR4_RUNTIME_LIB_FOUND} DIRECTORY)
+
 include_directories(${ANTLR4_RUNTIME_INC_FOUND} ${CMAKE_CURRENT_SOURCE_DIR})
-link_directories(${ANTLR4_RUNTIME_LIB_DIR})
-set(CMAKE_BUILD_RPATH ${ANTLR4_RUNTIME_LIB_DIR})
+link_directories(${ANTLR4_RUNTIME_LIB_DIR_FOUND})
+set(CMAKE_BUILD_RPATH ${ANTLR4_RUNTIME_LIB_DIR_FOUND})
 
 # ------------------------------------------------------------
 # ANTLR 生成：MiniSQL 解析器（构建时自动生成，不入库）
@@ -115,7 +128,7 @@ foreach(rule_file ${RULE_FILES})
                 -o ${PLUGIN_OUT_DIR}
                 --antlr-jar ${CMAKE_CURRENT_SOURCE_DIR}/misc/antlr-4.13.2-complete.jar
                 --antlr-inc ${ANTLR4_RUNTIME_INC_FOUND}
-                --antlr-lib ${ANTLR4_RUNTIME_LIB_DIR}
+                --antlr-lib ${ANTLR4_RUNTIME_LIB_DIR_FOUND}
                 --shared-dir ${CMAKE_CURRENT_SOURCE_DIR}/rules/_shared
                 ${rule_file}
         DEPENDS rulec
