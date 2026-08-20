@@ -88,7 +88,7 @@ verdict 规则：
 ```
 
 已知边界：生产环境仍需对 charset、双重编码、嵌套引号等做升级
-（见 DESIGN.md Roadmap）。
+（见 misc/DESIGN.md Roadmap）。
 
 ## 组件与职责
 
@@ -100,7 +100,7 @@ verdict 规则：
 | 插件 ABI | `rule_plugin.h` | `rule_abi / rule_attack_count / rule_attack / rule_check_text`（返回命中攻击类型） |
 | 主引擎 | `engine.cc` | Normalization → Fast Path → 解析判定 → Rule Engine → Verdict |
 | 规则集 | `rules/` | `rules/sqli/`（24 条）+ `rules/xss/`（1 条） |
-| 校验逻辑 | `validate_sqli.sh` | 47 个正/负样本断言，验证规则不误报、不漏报 |
+| 校验逻辑 | `misc/validate_sqli.sh` | 47 个正/负样本断言，验证规则不误报、不漏报 |
 
 ## 规则集
 
@@ -205,8 +205,7 @@ cmake --build build --target plugins
 ├── rule_compiler.cc     # rulec：ANTLR 规则语法 -> 解析器 -> .so
 ├── engine.cc               # 主引擎
 ├── CMakeLists.txt       # 构建（含 ANTLR 自动生成，生成物不入库）
-├── demo.sh              # 端到端演示脚本
-├── validate_sqli.sh     # 规则校验逻辑
+├── misc/                # 设计文档、antlr jar、演示/校验脚本
 ├── rules/
 │   ├── _shared/         # SQLTokens.g4 / RuleSQL.g4（规则共享词法与匹配骨架）
 │   ├── sqli/            # sqli_rules.g4（合并 24 条 SQLi 攻击，单插件）
@@ -216,5 +215,5 @@ cmake --build build --target plugins
 
 ## 设计文档与需求原文
 
-- 完整设计（架构、规则语法、编译流水线、插件 ABI、Roadmap）：[DESIGN.md](DESIGN.md)
-- 原始需求：[README](README)
+- 完整设计（架构、规则语法、编译流水线、插件 ABI、Roadmap）：[misc/DESIGN.md](misc/DESIGN.md)
+- 原始需求：[misc/README](misc/README)

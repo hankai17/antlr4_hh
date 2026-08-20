@@ -241,11 +241,12 @@ ANTLR 适合复杂 CFG，但逐请求跑完整解析在高压下成本偏高。�
 ├── rule_plugin.h         # 插件 ABI 契约
 ├── rule_compiler.cc      # rulec：ANTLR 规则语法 -> 解析器 -> .so
 ├── engine.cc                # 主引擎：Normalization/FastPath/解析判定/RuleEngine
+├── examples/call_plugin.c   # 最小动态库调用示例（纯 C）
 ├── rules/
 │   ├── _shared/          # SQLTokens.g4 / RuleSQL.g4（规则共享词法与表达式语法）
 │   ├── sqli/             # sqli_rules.g4（合并 24 条 SQLi 攻击，单插件）
-│   └── xss/script_tag.g4 # XSS raw 规则
-├── validate_sqli.sh      # 规则校验逻辑（正/负样本断言）
+│   └── xss/script_rules.g4 # XSS raw 规则
+├── misc/                 # 设计文档、antlr jar、demo.sh、validate_sqli.sh
 └── build/plugins/*.so    # 编译产物（热加载目录）
 ```
 

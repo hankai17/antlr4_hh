@@ -61,11 +61,11 @@ add_custom_command(
     OUTPUT ${MINISQL_GEN_SOURCES}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${MINISQL_GEN_DIR}
     COMMAND ${JAVA_EXECUTABLE} -jar
-            ${CMAKE_CURRENT_SOURCE_DIR}/antlr-4.13.2-complete.jar
+            ${CMAKE_CURRENT_SOURCE_DIR}/misc/antlr-4.13.2-complete.jar
             -Dlanguage=Cpp -no-listener -o ${MINISQL_GEN_DIR}
             ${CMAKE_CURRENT_SOURCE_DIR}/MiniSQL.g4
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/MiniSQL.g4
-            ${CMAKE_CURRENT_SOURCE_DIR}/antlr-4.13.2-complete.jar
+            ${CMAKE_CURRENT_SOURCE_DIR}/misc/antlr-4.13.2-complete.jar
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "generate MiniSQL lexer/parser (ANTLR)"
     VERBATIM
@@ -113,7 +113,7 @@ foreach(rule_file ${RULE_FILES})
         COMMAND $<TARGET_FILE:rulec>
                 --include ${CMAKE_CURRENT_SOURCE_DIR}
                 -o ${PLUGIN_OUT_DIR}
-                --antlr-jar ${CMAKE_CURRENT_SOURCE_DIR}/antlr-4.13.2-complete.jar
+                --antlr-jar ${CMAKE_CURRENT_SOURCE_DIR}/misc/antlr-4.13.2-complete.jar
                 --antlr-inc ${ANTLR4_RUNTIME_INC_FOUND}
                 --antlr-lib ${ANTLR4_RUNTIME_LIB_DIR}
                 --shared-dir ${CMAKE_CURRENT_SOURCE_DIR}/rules/_shared
@@ -134,7 +134,7 @@ add_custom_target(plugins ALL DEPENDS ${PLUGIN_SOS})
 # ------------------------------------------------------------
 
 add_custom_target(demo
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/demo.sh
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/misc/demo.sh
             $<TARGET_FILE:engine>
             ${PLUGIN_OUT_DIR}
     DEPENDS engine plugins
@@ -147,7 +147,7 @@ add_custom_target(demo
 # ------------------------------------------------------------
 
 add_custom_target(validate
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/validate_sqli.sh
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/misc/validate_sqli.sh
             $<TARGET_FILE:engine>
             ${PLUGIN_OUT_DIR}
     DEPENDS engine plugins
