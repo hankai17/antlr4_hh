@@ -8,6 +8,6 @@ parser grammar union_select;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : UNION ALL? SELECT expr_list? ;

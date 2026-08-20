@@ -8,6 +8,6 @@ parser grammar delete_fragment;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : DELETE FROM? IDENT ;

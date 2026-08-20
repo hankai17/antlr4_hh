@@ -8,6 +8,6 @@ parser grammar string_tautology;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : l=STRING EQ r=STRING {stringsEqual($l, $r)}? ;

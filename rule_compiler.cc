@@ -5,7 +5,7 @@
 // 输出：lib<name>_rule.so（独立插件，导出 rule_check_text）
 //
 // 流水线：
-//   rules/sqli/sleep.g4（ANTLR 语法，import SQLExpr）
+//   rules/sqli/sleep.g4（ANTLR 语法，import RuleSQL）
 //     --java--> sleep.{h,cpp}（规则解析器）
 //     + wrapper + 共享词法 SQLTokens
 //     --g++ -shared--> libsleep_rule.so
@@ -114,12 +114,13 @@ std::string cppEscape(const std::string& s) {
 // 生成共享词法（幂等）：ANTLR 会把输出镜像到源文件相对路径，需 cd 到目标目录
 bool ensureSharedLexer(const std::string& sharedOut, const std::string& sharedSrc,
                        const std::string& jar) {
-    if (fileExists(sharedOut + "/SQLTokens.cpp")) return true;
     std::error_code ec;
     std::filesystem::create_directories(sharedOut, ec);
-    // import 解析需要 SQLExpr.g4 与 tokenVocab 的 SQLTokens.tokens 在同一目录
-    std::filesystem::copy_file(sharedSrc + "/SQLExpr.g4", sharedOut + "/SQLExpr.g4",
+    // import 解析需要 RuleSQL.g4 与 tokenVocab 的 SQLTokens.tokens 在同一目录
+    std::filesystem::copy_file(sharedSrc + "/RuleSQL.g4", sharedOut + "/RuleSQL.g4",
                                std::filesystem::copy_options::overwrite_existing, ec);
+    std::filesystem::remove(sharedOut + "/SQLExpr.g4", ec);  // 清理旧名残留
+    if (fileExists(sharedOut + "/SQLTokens.cpp")) return true;
     auto cwd = std::filesystem::current_path();
     std::filesystem::current_path(sharedOut);
     std::string cmd = "java -jar " + jar + " -Dlanguage=Cpp -no-listener -o . " +

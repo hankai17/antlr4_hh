@@ -8,6 +8,6 @@ parser grammar order_by_expr;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : ORDER BY expr (ASC | DESC)? ;

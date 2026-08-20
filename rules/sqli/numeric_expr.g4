@@ -8,7 +8,7 @@ parser grammar numeric_expr;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 // 左侧必须是含运算符的算术（id=1 这种单操作数不命中）
 pattern : arith EQ add_expr ;

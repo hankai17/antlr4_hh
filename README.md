@@ -43,7 +43,7 @@ ALLOW / BLOCK / UNKNOWN
 
 - `MiniSQL.g4`：只判定"是否完整可解析的 SQL"（fullSqlOk 门控 + UNKNOWN 判定），
   不含任何安全语义。
-- `SQLTokens.g4` / `SQLExpr.g4`：规则共享的词法与表达式语法
+- `SQLTokens.g4` / `RuleSQL.g4`：规则共享的词法与表达式语法
   （位于 `rules/_shared/`），各规则 `import` 复用。
 - 攻击规则（`rules/**/*.g4`）是**标准 ANTLR parser grammar**，只描述攻击形状，
   头部注释携带元数据，不依赖引擎实现。
@@ -95,7 +95,7 @@ verdict 规则：
 | 组件 | 文件 | 职责 |
 |---|---|---|
 | 完整 SQL 判定 | `MiniSQL.g4` | fullSqlOk 门控（fragment/raw 画像）与 UNKNOWN 判定 |
-| 共享规则语法 | `rules/_shared/` | `SQLTokens.g4`（词法）+ `SQLExpr.g4`（表达式/语句 + 语义谓词） |
+| 共享规则语法 | `rules/_shared/` | `SQLTokens.g4`（词法）+ `RuleSQL.g4`（表达式/语句 + 语义谓词） |
 | 规则编译器 | `rule_compiler.cc` | ANTLR 语法规则 → 生成解析器 → `g++ -shared` → `.so` |
 | 插件 ABI | `rule_plugin.h` | `rule_abi / rule_info / rule_check_text` |
 | 主引擎 | `engine.cc` | Normalization → Fast Path → 解析判定 → Rule Engine → Verdict |
@@ -134,7 +134,7 @@ parser grammar always_true;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 // 语义谓词 numbersEqual 做数值规范化比较：1=1、2=2、1=1.0 命中，1=2 不命中
 pattern : l=NUMBER EQ r=NUMBER {numbersEqual($l, $r)}? ;
@@ -144,7 +144,7 @@ pattern : l=NUMBER EQ r=NUMBER {numbersEqual($l, $r)}? ;
 
 - 头部 `// rule: / severity: / action: / description: / profile:` 是规则元数据
 - `pattern` 是匹配入口；引擎对归一化文本的 token 流逐位置尝试匹配
-- 语义条件用 ANTLR 谓词表达（`isIdent` / `numbersEqual` / `stringsEqual` 等共享于 SQLExpr）
+- 语义条件用 ANTLR 谓词表达（`isIdent` / `numbersEqual` / `stringsEqual` 等共享于 RuleSQL）
 - 规则文件只依赖共享语法，与引擎实现解耦
 
 ## 快速开始
@@ -185,7 +185,7 @@ parser grammar benchmark;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : i=IDENT {isIdent($i, "benchmark")}? LPAREN expr_list? RPAREN ;
 ```
@@ -214,7 +214,7 @@ cmake --build build --target plugins
 ├── demo.sh              # 端到端演示脚本
 ├── validate_sqli.sh     # 规则校验逻辑
 ├── rules/
-│   ├── _shared/         # SQLTokens.g4 / SQLExpr.g4（规则共享词法与表达式语法）
+│   ├── _shared/         # SQLTokens.g4 / RuleSQL.g4（规则共享词法与表达式语法）
 │   ├── sqli/            # 24 条 SQLi 规则（标准 ANTLR 语法）
 │   └── xss/             # XSS 规则（raw 画像）
 └── build/plugins/       # 编译出的 .so（热加载目录）

@@ -8,6 +8,6 @@ parser grammar insert_fragment;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : INSERT INTO? IDENT? (LPAREN expr_list RPAREN)? (VALUES LPAREN expr_list RPAREN)? ;

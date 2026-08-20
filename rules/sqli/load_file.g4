@@ -8,6 +8,6 @@ parser grammar load_file;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : i=IDENT {isIdent($i, "load_file")}? LPAREN expr_list? RPAREN ;

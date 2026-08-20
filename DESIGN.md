@@ -54,7 +54,7 @@ ALLOW / BLOCK / UNKNOWN
 | 层 | 负责什么 | 谁修改 |
 |---|---|---|
 | MiniSQL.g4 | 完整 SQL 判定（语法、方言） | 解析器维护者 |
-| SQLTokens.g4 / SQLExpr.g4 | 规则共享词法 / 表达式语法 + 语义谓词 | 规则语法维护者 |
+| SQLTokens.g4 / RuleSQL.g4 | 规则共享词法 / 表达式语法 + 语义谓词 | 规则语法维护者 |
 | 规则文件 `rules/**/*.g4` | 具体攻击检测语义 | **安全人员** |
 | rulec | ANTLR 规则语法 -> 解析器 -> .so 编译 | 引擎维护者（安全人员无感） |
 
@@ -63,7 +63,7 @@ ALLOW / BLOCK / UNKNOWN
 ### 3.1 Grammar 与 Rule 分离
 
 - `MiniSQL.g4`：只判定"是否完整可解析的 SQL"，不含任何安全语义。
-- `SQLTokens.g4` / `SQLExpr.g4`：规则共享的词法与表达式语法。
+- `SQLTokens.g4` / `RuleSQL.g4`：规则共享的词法与表达式语法。
 - 规则文件（`rules/**/*.g4`）是**标准 ANTLR 语法**，用 token 与语义谓词描述攻击。
 
 SQL 方言升级、新增 token 时只动共享语法；新增攻击规则只动 `rules/`，引擎零改动。
@@ -149,7 +149,7 @@ rule always_true {
 
 ```
 rules/sqli/always_true.g4（ANTLR 语法 + 元数据注释）
-   │ rulec：java 生成规则解析器（import SQLExpr）
+   │ rulec：java 生成规则解析器（import RuleSQL）
    ▼
 build/plugins/gen/always_true.{h,cpp} + wrapper
    │ g++ -shared
@@ -158,7 +158,7 @@ libalways_true_rule.so（text 模式：对归一化文本 token 流匹配）
 ```
 
 - 共享词法 `SQLTokens.g4`：关键字映射、引号容错（字面量 vs 分隔引号）、未知字符跳过
-- 共享表达式语法 `SQLExpr.g4`：expr/comparison/select_stmt 与语义谓词
+- 共享表达式语法 `RuleSQL.g4`：expr/comparison/select_stmt 与语义谓词
   （isIdent / numbersEqual / stringsEqual），各规则 import 复用
 - 规则元数据（name/severity/action/description/profile）写在头部注释，rulec 解析
 - 引擎对 text 模式插件：归一化文本 → 共享词法 → 逐位置尝试 `pattern` 规则
@@ -179,7 +179,7 @@ parser grammar script_tag;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : LT i=IDENT {isIdent($i, "script")}? ;
 ```
@@ -189,7 +189,7 @@ pattern : LT i=IDENT {isIdent($i, "script")}? ;
 ```
 rules/sqli/sleep.g4
    |
-   | java 生成规则解析器（import SQLExpr / tokenVocab=SQLTokens）
+   | java 生成规则解析器（import RuleSQL / tokenVocab=SQLTokens）
    v
 规则解析器 sleep.{h,cpp} + wrapper（rule_check_text）
    |
@@ -240,7 +240,7 @@ ANTLR 适合复杂 CFG，但逐请求跑完整解析在高压下成本偏高。�
 ├── rule_compiler.cc      # rulec：ANTLR 规则语法 -> 解析器 -> .so
 ├── engine.cc                # 主引擎：Normalization/FastPath/解析判定/RuleEngine
 ├── rules/
-│   ├── _shared/          # SQLTokens.g4 / SQLExpr.g4（规则共享词法与表达式语法）
+│   ├── _shared/          # SQLTokens.g4 / RuleSQL.g4（规则共享词法与表达式语法）
 │   ├── sqli/             # SQLi 规则（标准 ANTLR 语法）
 │   └── xss/script_tag.g4 # XSS raw 规则
 ├── validate_sqli.sh      # 规则校验逻辑（正/负样本断言）
@@ -269,7 +269,7 @@ cmake --build build --target plugins
 
 ### 已实现
 - 攻击规则为标准 ANTLR 语法（25 条），rulec 逐条生成 C++ 匹配器 + 独立 .so
-- 共享规则语法：SQLTokens.g4（容错词法）+ SQLExpr.g4（表达式/语句 + 语义谓词）
+- 共享规则语法：SQLTokens.g4（容错词法）+ RuleSQL.g4（表达式/语句 + 语义谓词）
 - 语义谓词：isIdent / numbersEqual / stringsEqual（`1=1`、`2=2`、`1=1.0` 可命中）
 - `validate` 校验目标（47 个正/负样本断言）
 - 片段防护：共享词法容错 + 规则语法逐位置匹配，
@@ -287,7 +287,7 @@ cmake --build build --target plugins
   XSS 走 HTML parser（`html.g4` -> DOM AST），RCE 走 shell/表达式解析器。
 - **生产级容错词法**：已实现基础容错（引号不平衡、未知字符跳过）；
   生产仍需 libinjection 级能力：charset/双重编码、嵌套引号、MySQL 注释变体等。
-- **解析器合并（可选）**：MiniSQL.g4（完整判定）与规则语法（SQLExpr）可进一步
+- **解析器合并（可选）**：MiniSQL.g4（完整判定）与规则语法（RuleSQL）可进一步
   统一，实现单一 SQL 语法。
 - **插件治理**：插件签名校验（防投毒 .so）、沙箱/受限编译选项、
   插件元数据版本、性能预算（超时/调用次数上限）。

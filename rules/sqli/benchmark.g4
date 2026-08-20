@@ -8,6 +8,6 @@ parser grammar benchmark;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : i=IDENT {isIdent($i, "benchmark")}? LPAREN expr_list? RPAREN ;

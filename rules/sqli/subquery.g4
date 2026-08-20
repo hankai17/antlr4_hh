@@ -8,6 +8,6 @@ parser grammar subquery;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : LPAREN select_stmt RPAREN ;

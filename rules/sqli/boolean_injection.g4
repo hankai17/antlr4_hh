@@ -8,7 +8,7 @@ parser grammar boolean_injection;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 // 两侧都是列比较（a=1 OR b=2）不会命中：至少一侧必须是"常量 = 常量"
 // 结构检测不做等值求值（1=2 也算注入形状；恒真由 always_true 负责）

@@ -8,6 +8,6 @@ parser grammar string_concat;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : add_expr PIPE2 add_expr ;

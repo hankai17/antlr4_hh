@@ -8,6 +8,6 @@ parser grammar limit_expr;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : LIMIT expr (OFFSET expr)? ;

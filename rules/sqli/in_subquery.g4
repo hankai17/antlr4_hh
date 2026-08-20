@@ -8,6 +8,6 @@ parser grammar in_subquery;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : add_expr NOT? IN LPAREN select_stmt RPAREN ;

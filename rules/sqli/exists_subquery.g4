@@ -8,7 +8,7 @@ parser grammar exists_subquery;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern
     : EXISTS LPAREN select_stmt RPAREN

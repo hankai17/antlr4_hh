@@ -8,6 +8,6 @@ parser grammar update_fragment;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : UPDATE IDENT (SET expr_list?)? ;

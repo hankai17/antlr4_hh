@@ -8,6 +8,6 @@ parser grammar like_expr;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : add_expr NOT? LIKE add_expr ;

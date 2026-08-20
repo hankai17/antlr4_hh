@@ -8,6 +8,6 @@ parser grammar select_fragment;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : SELECT (STAR | expr_list) (FROM table_ref)? (WHERE expr)? (ORDER BY expr)? (LIMIT expr)? ;

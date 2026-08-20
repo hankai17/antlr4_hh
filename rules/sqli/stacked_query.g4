@@ -8,6 +8,6 @@ parser grammar stacked_query;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : SEMI (SELECT | INSERT | UPDATE | DELETE | DROP | ALTER | CREATE) ;

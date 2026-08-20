@@ -8,6 +8,6 @@ parser grammar db_enumeration;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : i=IDENT {isIdent($i, "information_schema")}? ;

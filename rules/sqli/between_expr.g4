@@ -8,6 +8,6 @@ parser grammar between_expr;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : add_expr NOT? BETWEEN add_expr AND add_expr ;

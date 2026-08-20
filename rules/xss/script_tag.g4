@@ -8,6 +8,6 @@ parser grammar script_tag;
 
 options { tokenVocab = SQLTokens; }
 
-import SQLExpr;
+import RuleSQL;
 
 pattern : LT i=IDENT {isIdent($i, "script")}? ;
