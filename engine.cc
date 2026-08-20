@@ -96,14 +96,12 @@ std::string lower(std::string s) {
 // 规则插件加载
 // ------------------------------------------------------------
 
-struct LoadedRule {
+struct LoadedPlugin {
     void* handle = nullptr;
-    std::string name;
-    std::string severity;
-    std::string action;
-    std::string description;
-    std::string profile;
-    bool (*checkText)(const char*) = nullptr;
+    std::vector<rule::AttackInfo> attacks;   // 插件包含的攻击类型
+    int (*countFn)() = nullptr;
+    const rule::AttackInfo* (*infoFn)(int) = nullptr;
+    int (*checkText)(const char*, int*, int) = nullptr;  // 返回命中攻击索引数量
 };
 
 std::vector<std::string> listPlugins(const std::string& dir) {
@@ -118,8 +116,8 @@ std::vector<std::string> listPlugins(const std::string& dir) {
     return files;
 }
 
-std::vector<LoadedRule> loadRules(const std::string& dir) {
-    std::vector<LoadedRule> rules;
+std::vector<LoadedPlugin> loadRules(const std::string& dir) {
+    std::vector<LoadedPlugin> rules;
     for (const auto& path : listPlugins(dir)) {
         void* handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
         if (!handle) {
@@ -128,10 +126,12 @@ std::vector<LoadedRule> loadRules(const std::string& dir) {
         }
 
         auto abi = reinterpret_cast<int (*)()>(dlsym(handle, "rule_abi"));
-        auto infoFn = reinterpret_cast<const rule::RuleInfo* (*)()>(dlsym(handle, "rule_info"));
-        auto checkText = reinterpret_cast<bool (*)(const char*)>(
+        auto countFn = reinterpret_cast<int (*)()>(dlsym(handle, "rule_attack_count"));
+        auto infoFn = reinterpret_cast<const rule::AttackInfo* (*)(int)>(
+            dlsym(handle, "rule_attack"));
+        auto checkText = reinterpret_cast<int (*)(const char*, int*, int)>(
             dlsym(handle, "rule_check_text"));
-        if (!abi || !infoFn || !checkText) {
+        if (!abi || !countFn || !infoFn || !checkText) {
             std::cerr << "[engine] bad plugin symbols: " << path << "\n";
             dlclose(handle);
             continue;
@@ -143,15 +143,20 @@ std::vector<LoadedRule> loadRules(const std::string& dir) {
             continue;
         }
 
-        const rule::RuleInfo* info = infoFn();
-        LoadedRule r;
+        LoadedPlugin r;
         r.handle = handle;
-        r.name = info->name;
-        r.severity = info->severity;
-        r.action = info->action;
-        r.description = info->description;
-        r.profile = info->profile;
+        r.countFn = countFn;
+        r.infoFn = infoFn;
         r.checkText = checkText;
+        int n = countFn();
+        for (int i = 0; i < n; ++i) {
+            if (const rule::AttackInfo* a = infoFn(i)) r.attacks.push_back(*a);
+        }
+        if (r.attacks.empty()) {
+            std::cerr << "[engine] plugin has no attacks: " << path << "\n";
+            dlclose(handle);
+            continue;
+        }
         rules.push_back(std::move(r));
     }
     return rules;
@@ -248,20 +253,27 @@ int main(int argc, char* argv[]) {
     std::cout << "\n";
 
     // 3. 加载规则插件
-    std::vector<LoadedRule> rules = loadRules(rulesDir);
+    std::vector<LoadedPlugin> rules = loadRules(rulesDir);
     if (rules.empty()) {
         std::cerr << "[engine] no rule plugins loaded from " << rulesDir << "\n";
         return 1;
     }
-    std::cout << "RULES (" << rules.size() << " loaded from " << rulesDir << "):\n";
+    size_t totalAttacks = 0;
+    for (const auto& r : rules) totalAttacks += r.attacks.size();
+    std::cout << "RULES (" << totalAttacks << " attacks in " << rules.size()
+              << " plugins from " << rulesDir << "):\n";
     for (const auto& r : rules) {
-        std::cout << "  - " << r.name << " [" << r.severity << "/" << r.action
-                  << "/" << r.profile << "] " << r.description << "\n";
+        for (const auto& a : r.attacks) {
+            std::cout << "  - " << a.name << " [" << a.severity << "/" << a.action
+                      << "/" << a.profile << "] " << a.description << "\n";
+        }
     }
 
     bool needSql = false;
     for (const auto& r : rules) {
-        if (r.profile == "sql") needSql = true;
+        for (const auto& a : r.attacks) {
+            if (std::string(a.profile) == "sql") needSql = true;
+        }
     }
 
     // 4. 完整 SQL 判定（fullSqlOk：fragment/raw 画像门控 + UNKNOWN 判定）
@@ -272,24 +284,35 @@ int main(int argc, char* argv[]) {
     }
 
     // 5. Rule Engine
-    std::vector<const LoadedRule*> matched;
+    struct Matched {
+        const rule::AttackInfo* attack;
+    };
+    std::vector<Matched> matched;
     for (const auto& r : rules) {
-        // ANTLR 语法规则：匹配归一化文本的 token 流；
-        // fragment/raw 画像只在输入不是完整 SQL 时参与判定
-        if ((r.profile == "fragment" || r.profile == "raw") && fullSqlOk) continue;
-        bool hit = r.checkText(normalized.c_str());
-        if (hit) matched.push_back(&r);
+        int buf[64];
+        int n = r.checkText(normalized.c_str(), buf, 64);
+        for (int i = 0; i < n; ++i) {
+            if (buf[i] < 0 || buf[i] >= static_cast<int>(r.attacks.size())) continue;
+            const rule::AttackInfo* a = &r.attacks[buf[i]];
+            // fragment/raw 画像只在输入不是完整 SQL 时参与判定
+            if ((std::string(a->profile) == "fragment" || std::string(a->profile) == "raw") &&
+                fullSqlOk) {
+                continue;
+            }
+            matched.push_back({a});
+        }
     }
 
-    std::cout << "MATCHED RULES: " << matched.size() << "\n";
-    for (const auto* r : matched) {
-        std::cout << "  !! " << r->name << " [" << r->severity << "] " << r->description << "\n";
+    std::cout << "MATCHED ATTACKS: " << matched.size() << "\n";
+    for (const auto& m : matched) {
+        std::cout << "  !! " << m.attack->name << " [" << m.attack->severity
+                  << "] " << m.attack->description << "\n";
     }
 
     // 6. Verdict：完整 SQL 或命中任意规则 => 已识别（ALLOW），否则 UNKNOWN
     bool blocked = false;
-    for (const auto* r : matched) {
-        if (r->action == "BLOCK") blocked = true;
+    for (const auto& m : matched) {
+        if (std::string(m.attack->action) == "BLOCK") blocked = true;
     }
 
     bool sqlOk = fullSqlOk || !matched.empty();

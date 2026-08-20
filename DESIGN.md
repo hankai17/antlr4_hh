@@ -208,8 +208,10 @@ build/plugins/libsleep_rule.so
 
 ```cpp
  int       rule_abi();                       // 版本协商，不匹配拒绝加载
- RuleInfo* rule_info();                      // name / severity / action / description / profile
- bool      rule_check_text(const char* text); // 对归一化文本做 token 匹配
+ int       rule_attack_count();              // 插件包含的攻击数量
+ AttackInfo* rule_attack(int i);             // 第 i 个攻击元信息（name/severity/action/...）
+ int       rule_check_text(const char* text, int* matched, int max);
+                                             // 返回命中攻击索引数量（应用层可获取攻击类型）
 ```
 
 主引擎 `dlopen(RTLD_NOW|RTLD_LOCAL)` + `dlsym` 加载；加载失败、符号缺失、
@@ -241,7 +243,7 @@ ANTLR 适合复杂 CFG，但逐请求跑完整解析在高压下成本偏高。�
 ├── engine.cc                # 主引擎：Normalization/FastPath/解析判定/RuleEngine
 ├── rules/
 │   ├── _shared/          # SQLTokens.g4 / RuleSQL.g4（规则共享词法与表达式语法）
-│   ├── sqli/             # SQLi 规则（标准 ANTLR 语法）
+│   ├── sqli/             # sqli_rules.g4（合并 24 条 SQLi 攻击，单插件）
 │   └── xss/script_tag.g4 # XSS raw 规则
 ├── validate_sqli.sh      # 规则校验逻辑（正/负样本断言）
 └── build/plugins/*.so    # 编译产物（热加载目录）
@@ -268,7 +270,8 @@ cmake --build build --target plugins
 ## 10. 已实现原型 vs 生产化差距（Roadmap）
 
 ### 已实现
-- 攻击规则为标准 ANTLR 语法（25 条），rulec 逐条生成 C++ 匹配器 + 独立 .so
+- 攻击规则为标准 ANTLR 语法，SQLi 24 条合并进单个 sqli_rules.g4（单插件），
+  rulec 生成 C++ 匹配器；插件 ABI 返回命中攻击类型列表（名称/级别/动作/描述/profile）
 - 共享规则语法：SQLTokens.g4（容错词法）+ RuleSQL.g4（表达式/语句 + 语义谓词）
 - 语义谓词：isIdent / numbersEqual / stringsEqual（`1=1`、`2=2`、`1=1.0` 可命中）
 - `validate` 校验目标（47 个正/负样本断言）
@@ -303,3 +306,23 @@ cmake --build build --target plugins
   （rulec 只允许声明式模式，禁止任意代码注入——模式值统一走字符串转义）。
 - **规则质量**：语义规则可读性好、误报面小（`2=2` 不误报即示例）；
   生产需要规则测试夹具（正/负样本回归）。
+- 规则想直接 import MiniSQL 是不行的，除了 ANTLR 禁止 parser grammar import combined grammar 之外，即便拆开，两者的词法哲学（容错 vs 严格）和 token 集合（SQLTokens 有
+  DROP/||/分号，MiniSQL 有 GROUP/CASE/JOIN）也天然不同——合并不了，只能让规则侧在 MiniSQL 的 parser 语法基础上做词汇表对齐。
+  所以 不完整sql必须自定义lexer  minisql.g4是lexer/parser一体的
+-               SQLTokens.g4                                                        lexer.l
+  ━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   工具链      ANTLR4（.g4 → C++）                                                 Flex/lex（.l → C）
+  ──────────  ──────────────────────────────────────────────────────────────────  ──────────────────────────────────────────────────────────────────────────────────────────────────
+   词法对象    SQL 文本（关键字、操作符、数字/字符串字面量）                       规则 DSL（export/action/%{...} 代码块、正则字符类、转义字符串）——不是 SQL
+  ──────────  ──────────────────────────────────────────────────────────────────  ──────────────────────────────────────────────────────────────────────────────────────────────────
+   容错设计    引号容错（字面量 vs 分隔引号）、未知字符跳过、关键字大小写不敏感    状态机严格处理（IN_PAREN/IN_BRACKET/IN_CODE 等 start condition，非法字符返回 INVALID_CHARACTER）
+  ──────────  ──────────────────────────────────────────────────────────────────  ──────────────────────────────────────────────────────────────────────────────────────────────────
+   结构        声明式 lexer 规则 + @lexer::members 谓词                            正则规则 + 内嵌 C++ action（return IDENT; 等）
+  ──────────  ──────────────────────────────────────────────────────────────────  ──────────────────────────────────────────────────────────────────────────────────────────────────
+   产出        token 流，供规则语法 tokenVocab 使用                                token 流，喂给 Bison/yacc 解析器（parser.hh）
+  ──────────  ──────────────────────────────────────────────────────────────────  ──────────────────────────────────────────────────────────────────────────────────────────────────
+   在本项目    在用：25 条规则全部经它分词，构建时自动生成                         废弃：无人引用
+
+
+- SQLTokens.g4作为lexer 的输出是 RuleSQL.g4作为parser 的输入是吧 方向对，但有一个关键细节要修正：RuleSQL.g4 本身不会生成一个独立运行的 parser——它只是被每条规则 import 的“共享语法片段”，在生成每条规则的 parser 时被 ANTLR 合并进去
+  SQLTokens.g4 生成词法器，把文本变成 token；RuleSQL.g4 是规则 parser 的共享零件，被合并进每条规则；规则 parser 消费 token 流匹配自己的 pattern。

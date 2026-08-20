@@ -97,7 +97,7 @@ verdict 规则：
 | 完整 SQL 判定 | `MiniSQL.g4` | fullSqlOk 门控（fragment/raw 画像）与 UNKNOWN 判定 |
 | 共享规则语法 | `rules/_shared/` | `SQLTokens.g4`（词法）+ `RuleSQL.g4`（表达式/语句 + 语义谓词） |
 | 规则编译器 | `rule_compiler.cc` | ANTLR 语法规则 → 生成解析器 → `g++ -shared` → `.so` |
-| 插件 ABI | `rule_plugin.h` | `rule_abi / rule_info / rule_check_text` |
+| 插件 ABI | `rule_plugin.h` | `rule_abi / rule_attack_count / rule_attack / rule_check_text`（返回命中攻击类型） |
 | 主引擎 | `engine.cc` | Normalization → Fast Path → 解析判定 → Rule Engine → Verdict |
 | 规则集 | `rules/` | `rules/sqli/`（24 条）+ `rules/xss/`（1 条） |
 | 校验逻辑 | `validate_sqli.sh` | 47 个正/负样本断言，验证规则不误报、不漏报 |
@@ -168,26 +168,20 @@ cmake --build build --target validate  # 规则校验（47 个正/负样本断�
 ./build/engine --fail-closed "hello union world"                  # 解析失败 -> BLOCK（默认 UNKNOWN）
 ```
 
-### 新增一条规则（安全人员视角，不碰 C++）
+### 新增一条攻击（安全人员视角，不碰 C++）
 
 ```bash
-vi rules/sqli/benchmark.g4
+vi rules/sqli/sqli_rules.g4
 ```
 
 ```g4
-// rule: benchmark
+// attack: benchmark
 // severity: CRITICAL
 // action: BLOCK
 // description: 性能消耗函数 BENCHMARK()
 // profile: sql
 
-parser grammar benchmark;
-
-options { tokenVocab = SQLTokens; }
-
-import RuleSQL;
-
-pattern : i=IDENT {isIdent($i, "benchmark")}? LPAREN expr_list? RPAREN ;
+benchmark_pat : i=IDENT {isIdent($i, "benchmark")}? LPAREN expr_list? RPAREN ;
 ```
 
 ```bash
@@ -214,8 +208,8 @@ cmake --build build --target plugins
 ├── demo.sh              # 端到端演示脚本
 ├── validate_sqli.sh     # 规则校验逻辑
 ├── rules/
-│   ├── _shared/         # SQLTokens.g4 / RuleSQL.g4（规则共享词法与表达式语法）
-│   ├── sqli/            # 24 条 SQLi 规则（标准 ANTLR 语法）
+│   ├── _shared/         # SQLTokens.g4 / RuleSQL.g4（规则共享词法与匹配骨架）
+│   ├── sqli/            # sqli_rules.g4（合并 24 条 SQLi 攻击，单插件）
 │   └── xss/             # XSS 规则（raw 画像）
 └── build/plugins/       # 编译出的 .so（热加载目录）
 ```
