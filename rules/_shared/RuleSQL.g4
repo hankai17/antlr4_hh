@@ -114,9 +114,9 @@ expr_not : NOT* expr_binary ;
 expr_binary
     : expr_comparison (
         (EQ | NE) expr_comparison
-        | IS NOT? (NULL | TRUE | FALSE)
+        | IS NOT? expr_comparison
         | NOT? BETWEEN expr_comparison AND expr_comparison
-        | NOT? IN LPAREN (select_stmt | expr_comparison (COMMA expr_comparison)*) RPAREN
+        | NOT? IN LPAREN (select_stmt | expr_list)? RPAREN
         | NOT? LIKE expr_comparison
     )*
     ;
@@ -148,15 +148,35 @@ expr_recursive
 // 最小 SELECT 形状（用于子查询/片段识别，非完整 SELECT 语法）
 // ----------------------------------------------------------
 
-select_stmt : select_core ;
+// 最小 SELECT 形状（对齐 SQLiteParser.g4 的 select_stmt/select_core，
+// 仅保留本规则已用到/片段识别所需的子集：DISTINCT/ALL、result_column、
+// FROM、WHERE、ORDER BY、LIMIT；with_clause/join/GROUP BY/WINDOW/VALUES 未实现）
+
+select_stmt : select_core order_clause? limit_clause? ;
 
 select_core
-    : SELECT (STAR | expr_list)
-      (FROM table_ref)?
+    : SELECT (DISTINCT | ALL)? result_column (COMMA result_column)*
+      (FROM table_or_subquery)?
       (WHERE expr)?
     ;
 
-table_ref : IDENT | LPAREN select_stmt RPAREN ;
+result_column
+    : STAR
+    | expr (AS? IDENT)?
+    ;
+
+order_clause
+    : ORDER BY expr (ASC | DESC)? (COMMA expr (ASC | DESC)?)*
+    ;
+
+limit_clause
+    : LIMIT expr ((OFFSET | COMMA) expr)?
+    ;
+
+table_or_subquery
+    : IDENT (AS? IDENT)?
+    | LPAREN select_stmt RPAREN (AS? IDENT)?
+    ;
 
 // ----------------------------------------------------------
 // 常量值：字面量或任意层括号包裹（1 / (1) / ((1))）

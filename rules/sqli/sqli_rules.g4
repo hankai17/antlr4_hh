@@ -183,14 +183,14 @@ delete_fragment_pat : DELETE FROM? IDENT ;
 // action: ALLOW
 // description: SELECT 片段
 // profile: fragment
-select_fragment_pat : SELECT (STAR | expr_list) (FROM table_ref)? (WHERE expr)? (ORDER BY expr)? (LIMIT expr)? ;
+select_fragment_pat : SELECT (STAR | expr_list) (FROM table_or_subquery)? (WHERE expr)? (ORDER BY expr)? (LIMIT expr)? ;
 
 // attack: select_from_fragment
 // severity: LOW
 // action: ALLOW
 // description: SELECT ... FROM 片段
 // profile: fragment
-select_from_fragment_pat : SELECT (STAR | expr_list) FROM table_ref ;
+select_from_fragment_pat : SELECT (STAR | expr_list) FROM table_or_subquery ;
 
 // attack: db_enumeration
 // severity: MEDIUM

@@ -49,6 +49,7 @@ int keywordType(const std::string& text) {
         {"exists", EXISTS}, {"in", IN}, {"like", LIKE},
         {"between", BETWEEN}, {"is", IS}, {"not", NOT}, {"and", AND}, {"or", OR},
         {"null", NULL_}, {"true", TRUE}, {"false", FALSE}, {"asc", ASC}, {"desc", DESC},
+        {"distinct", DISTINCT}, {"as", AS},
     };
     auto it = map.find(low);
     return it == map.end() ? IDENT : it->second;
@@ -59,7 +60,7 @@ tokens {
     SELECT, UNION, ALL, FROM, WHERE, ORDER, BY, LIMIT, OFFSET,
     INSERT, INTO, VALUES, UPDATE, SET, DELETE, DROP, ALTER, CREATE,
     EXISTS, IN, LIKE, BETWEEN, IS, NOT, AND, OR,
-    NULL, TRUE, FALSE, ASC, DESC
+    NULL, TRUE, FALSE, ASC, DESC, DISTINCT, AS
 }
 
 fragment DIGIT : [0-9];
