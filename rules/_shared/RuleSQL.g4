@@ -101,7 +101,8 @@ static bool constStringsEqual(antlr4::ParserRuleContext* a,
 //   expr -> expr_or -> expr_and -> expr_not(NOT*)
 //   -> expr_binary(= != | IS | BETWEEN | IN | LIKE 尾缀内联)
 //   -> expr_comparison(< <= > >=) -> expr_bitwise -> expr_addition(+-)
-//   -> expr_multiplication(* / %) -> expr_string(||) -> expr_unary
+//   -> expr_multiplication(* / %) -> expr_string(||) -> expr_collate
+//   -> expr_unary
 //   -> expr_base(字面量/标识符/函数/子查询/括号)
 // ----------------------------------------------------------
 
@@ -124,12 +125,13 @@ expr_comparison : expr_bitwise ((LT | LE | GT | GE) expr_bitwise)* ;
 expr_bitwise    : expr_addition ;   // SQLTokens 无 << >> & | token，保留层级占位
 expr_addition   : expr_multiplication ((PLUS | MINUS) expr_multiplication)* ;
 expr_multiplication : expr_string ((STAR | DIV | MOD) expr_string)* ;
-expr_string     : expr_unary (PIPE2 expr_unary)* ;
+expr_string     : expr_collate (PIPE2 expr_collate)* ;
+expr_collate    : expr_unary ;      // COLLATE 未用，保留层级（SQLiteParser.g4）
 expr_unary      : (PLUS | MINUS)* expr_base ;
 
 expr_base
     : literal_value
-    | IDENT (LPAREN expr_list? RPAREN)?
+    | IDENT                          // column_name_excluding_string
     | (NOT? EXISTS)? LPAREN select_stmt RPAREN
     | expr_recursive
     ;
@@ -137,13 +139,18 @@ expr_base
 literal_value : NUMBER | STRING | TRUE | FALSE | NULL ;
 
 expr_list      : expr (COMMA expr)* ;
-expr_recursive : LPAREN expr (COMMA expr)* RPAREN ;   // 括号表达式（SQLiteParser.g4）
+expr_recursive
+    : IDENT LPAREN (expr_list | STAR)? RPAREN   // 函数调用（SQLiteParser.g4）
+    | LPAREN expr (COMMA expr)* RPAREN          // 括号表达式
+    ;
 
 // ----------------------------------------------------------
 // 最小 SELECT 形状（用于子查询/片段识别，非完整 SELECT 语法）
 // ----------------------------------------------------------
 
-select_stmt
+select_stmt : select_core ;
+
+select_core
     : SELECT (STAR | expr_list)
       (FROM table_ref)?
       (WHERE expr)?
