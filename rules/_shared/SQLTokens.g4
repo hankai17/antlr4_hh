@@ -72,6 +72,9 @@ STRING : {literalLikeAhead()}? '\'' (~('\'' | '\r' | '\n'))*? '\'' ;
 // 悬空/分隔引号进隐藏通道，解析器不可见
 QUOTE : '\'' -> channel(HIDDEN);
 
+// 双引号字符串（SQL 里 "a" 也常作字面量）：并入 STRING
+DQUOTED : '"' (~["\r\n])* '"' -> type(STRING);
+
 IDENT : [a-zA-Z_] [a-zA-Z0-9_]* { setType(keywordType(getText())); } ;
 
 EQ    : '=';

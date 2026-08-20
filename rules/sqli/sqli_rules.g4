@@ -25,6 +25,26 @@ always_true_pat : l=NUMBER EQ r=NUMBER {numbersEqual($l, $r)}? ;
 // profile: sql
 string_tautology_pat : l=STRING EQ r=STRING {stringsEqual($l, $r)}? ;
 
+// attack: boolean_or_constant
+// severity: MEDIUM
+// action: BLOCK
+// description: 布尔注入：OR/AND 一侧为裸常量（... OR 1）
+// profile: sql
+// anchor: start
+boolean_or_constant_pat
+    : cmp_with_op (OR | AND) (NUMBER | STRING) EOF
+    | (NUMBER | STRING) (OR | AND) cmp_with_op EOF
+    ;
+
+cmp_with_op : add_expr cmp_op add_expr ;
+
+// attack: string_cmp
+// severity: MEDIUM
+// action: BLOCK
+// description: 字符串常量直接比较（'a' < 'b'）
+// profile: sql
+string_cmp_pat : STRING cmp_op STRING ;
+
 // attack: boolean_injection
 // severity: MEDIUM
 // action: BLOCK

@@ -33,6 +33,11 @@ using namespace antlr4;
 
 namespace {
 
+std::string lower(std::string s) {
+    for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return s;
+}
+
 // ------------------------------------------------------------
 // Normalization
 // ------------------------------------------------------------
@@ -50,22 +55,36 @@ std::string trim(const std::string& s) {
 std::string normalize(const std::string& raw) {
     std::string s = raw;
 
-    // 块注释 /* ... */
+    // 块注释 /* ... */：嵌套感知，替换为空格（避免 UNION/**/SELECT 拼成一个词）
     while (true) {
         size_t p = s.find("/*");
         if (p == std::string::npos) break;
-        size_t q = s.find("*/", p + 2);
+        size_t depth = 1;
+        size_t i = p + 2;
+        size_t q = std::string::npos;
+        while (i < s.size()) {
+            if (s.compare(i, 2, "/*") == 0) { depth += 1; i += 2; continue; }
+            if (s.compare(i, 2, "*/") == 0) {
+                depth -= 1;
+                if (depth == 0) { q = i; break; }
+                i += 2;
+                continue;
+            }
+            ++i;
+        }
         if (q == std::string::npos) {
-            s.erase(p);
+            s.replace(p, s.size() - p, " ");
             break;
         }
-        s.erase(p, q + 2 - p);
+        s.replace(p, q + 2 - p, " ");
     }
 
     // 行注释 -- ...（含 MySQL 变体 -- 后跟空白才生效，原型从宽）
+    // 替换为空格而非擦除，保留后续内容（-- 注释后的 SQL 关键字仍可见）
     std::string out;
     for (size_t i = 0; i < s.size();) {
         if (s[i] == '-' && i + 1 < s.size() && s[i + 1] == '-') {
+            out += ' ';
             while (i < s.size() && s[i] != '\n') ++i;
         } else {
             out += s[i++];
@@ -87,9 +106,67 @@ std::string normalize(const std::string& raw) {
     return trim(collapsed);
 }
 
-std::string lower(std::string s) {
-    for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    return s;
+// 注释混淆检测（作用于原始输入，先于 Fast Path）：
+//   * 块注释：嵌套、内含 SQL 关键字、或紧邻标识符/关键字（如 UNION/**/SELECT）
+//   * 行注释：内容含 SQL 关键字（如 --1 OR 1）
+bool isCommentObfuscation(const std::string& raw) {
+    static const char* kKeywords[] = {
+        "or", "and", "union", "select", "from", "where", "order", "by",
+        "limit", "sleep", "benchmark", "load_file", "pg_sleep", "insert",
+        "update", "delete", "drop", "alter", "create", "exists", "between",
+    };
+    auto containsKeyword = [&](const std::string& s) {
+        std::string low = lower(s);
+        for (const char* kw : kKeywords) {
+            std::string k = kw;
+            size_t p = 0;
+            while ((p = low.find(k, p)) != std::string::npos) {
+                bool leftOk = p == 0 || !std::isalnum(static_cast<unsigned char>(low[p - 1]));
+                bool rightOk = p + k.size() >= low.size() ||
+                               !std::isalnum(static_cast<unsigned char>(low[p + k.size()]));
+                if (leftOk && rightOk) return true;
+                p += k.size();
+            }
+        }
+        return false;
+    };
+
+    size_t i = 0;
+    while (i < raw.size()) {
+        if (raw.compare(i, 2, "/*") == 0) {
+            size_t depth = 1, j = i + 2, end = std::string::npos;
+            while (j < raw.size()) {
+                if (raw.compare(j, 2, "/*") == 0) { depth += 1; j += 2; continue; }
+                if (raw.compare(j, 2, "*/") == 0) {
+                    depth -= 1;
+                    if (depth == 0) { end = j; break; }
+                    j += 2;
+                    continue;
+                }
+                ++j;
+            }
+            size_t contentEnd = end == std::string::npos ? raw.size() : end;
+            std::string content = raw.substr(i + 2, contentEnd - i - 2);
+            if (content.find("/*") != std::string::npos) return true;   // 嵌套
+            if (containsKeyword(content)) return true;                   // 内含关键字
+            // 紧邻标识符/关键字：UNION/**/SELECT
+            if (i > 0 && std::isalnum(static_cast<unsigned char>(raw[i - 1]))) return true;
+            if (end != std::string::npos && end + 2 < raw.size() &&
+                std::isalnum(static_cast<unsigned char>(raw[end + 2]))) return true;
+            i = end == std::string::npos ? raw.size() : end + 2;
+            continue;
+        }
+        if ((raw[i] == '-' && i + 1 < raw.size() && raw[i + 1] == '-') || raw[i] == '#') {
+            size_t j = i + (raw[i] == '#' ? 1 : 2);
+            size_t e = raw.find('\n', j);
+            if (e == std::string::npos) e = raw.size();
+            if (containsKeyword(raw.substr(j, e - j))) return true;      // 注释里藏关键字
+            i = e + 1;
+            continue;
+        }
+        ++i;
+    }
+    return false;
 }
 
 // ------------------------------------------------------------
@@ -242,9 +319,13 @@ int main(int argc, char* argv[]) {
     std::string normalized = normalize(payload);
     std::cout << "NORMAL: " << normalized << "\n";
 
+    // 1.5 注释混淆检测（作用于原始输入，先于 Fast Path）
+    bool obfuscation = isCommentObfuscation(payload);
+    if (obfuscation) std::cout << "OBFUSCATION: comment hides SQL keywords\n";
+
     // 2. Fast Path
     std::vector<std::string> hits = fastPathHit(normalized);
-    if (hits.empty()) {
+    if (hits.empty() && !obfuscation) {
         std::cout << "FAST PATH: no suspicious token -> ALLOW\n";
         return 0;
     }
@@ -288,6 +369,11 @@ int main(int argc, char* argv[]) {
         const rule::AttackInfo* attack;
     };
     std::vector<Matched> matched;
+    // 注释混淆为内置攻击（不依赖插件）
+    static const rule::AttackInfo kObfAttack = {
+        "comment_obfuscation", "HIGH", "BLOCK", "注释混淆：注释隐藏 SQL 关键字", "sql",
+    };
+    if (obfuscation) matched.push_back({&kObfAttack});
     for (const auto& r : rules) {
         int buf[64];
         int n = r.checkText(normalized.c_str(), buf, 64);

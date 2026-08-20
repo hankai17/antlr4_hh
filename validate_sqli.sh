@@ -61,6 +61,14 @@ check "SELECT pg_sleep(5)"                               BLOCK   pg_sleep
 check "SELECT * FROM t WHERE 'a'='a'"                    BLOCK   string_tautology
 check "GET /q?x=<script>alert(1)</script>"               BLOCK   script_tag
 
+# 混淆 / 布尔形状回归（1.log 案例）
+check "1 = '1' OR 1"                                     BLOCK   boolean_or_constant
+check "1 /* /* */ */ 2"                                  BLOCK   comment_obfuscation
+check "1 = '1' /* \"blah\" */ OR 1"                      BLOCK   boolean_or_constant
+check "UNION/**/SELECT/**/password/**/FROM/**/users"      BLOCK   union_select
+check "1' == --1 OR 1"                                   BLOCK   comment_obfuscation
+check "1 and \"a\" < \"b\""                              BLOCK   string_cmp
+
 # ------------------------------------------------------------
 # 正样本：检测型规则（命中但按 action 放行 / 解析失败）
 # ------------------------------------------------------------

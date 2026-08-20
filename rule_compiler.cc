@@ -35,6 +35,7 @@ struct AttackMeta {
     std::string description;
     std::string profile = "sql";
     std::string matcher;   // 匹配子规则名（元数据块后的第一条语法规则）
+    bool anchorStart = false;  // 仅从 token 0 匹配（整段输入即攻击表达式）
 };
 
 bool isAntlrGrammar(const std::string& path) {
@@ -83,6 +84,7 @@ std::vector<AttackMeta> parseAttacks(const std::string& path) {
         keyval(line, "action", &cur.action);
         keyval(line, "description", &cur.description);
         keyval(line, "profile", &cur.profile);
+        if (line.find("// anchor: start") != std::string::npos) cur.anchorStart = true;
         // 元数据块后的第一条语法规则行 = 该攻击的匹配子规则名
         // （规则名顶格书写：单行 "name : ..." 或多行 "name" 均可）
         if (have && cur.matcher.empty()) {
@@ -199,26 +201,34 @@ std::string generateWrapper(const std::vector<AttackMeta>& attacks, const std::s
         << "        if (t->getType() == Token::EOF) break;\n"
         << "        if (t->getChannel() == Token::DEFAULT_CHANNEL) visible.push_back(t);\n"
         << "    }\n"
-        << "    int count = 0;\n"
-        << "    for (int k = 0; k < " << n << " && count < max_matches; ++k) {\n"
-        << "        for (size_t i = 0; i < visible.size(); ++i) {\n"
-        << "            tokens.seek(visible[i]->getTokenIndex());\n"
-        << "            " << cls << " parser(&tokens);\n"
-        << "            parser.removeErrorListeners();\n"
-        << "            parser.setErrorHandler(std::make_shared<BailErrorStrategy>());\n"
-        << "            try {\n"
-        << "                switch (k) {\n";
-    for (size_t i = 0; i < n; ++i) {
-        out << "                    case " << i << ": parser." << attacks[i].matcher << "(); break;\n";
+        << "    int count = 0;\n";
+    for (size_t k = 0; k < n; ++k) {
+        const AttackMeta& a = attacks[k];
+        out << "    // attack " << k << ": " << a.name
+            << (a.anchorStart ? "（锚定 token 0）" : "（逐位置）") << "\n";
+        if (a.anchorStart) {
+            out << "    if (count < max_matches) {\n"
+                << "        tokens.seek(0);\n"
+                << "        " << cls << " parser(&tokens);\n"
+                << "        parser.removeErrorListeners();\n"
+                << "        parser.setErrorHandler(std::make_shared<BailErrorStrategy>());\n"
+                << "        try { parser." << a.matcher << "(); matched[count++] = " << k
+                << "; } catch (...) {}\n"
+                << "    }\n";
+        } else {
+            out << "    if (count < max_matches) {\n"
+                << "        for (size_t i = 0; i < visible.size(); ++i) {\n"
+                << "            tokens.seek(visible[i]->getTokenIndex());\n"
+                << "            " << cls << " parser(&tokens);\n"
+                << "            parser.removeErrorListeners();\n"
+                << "            parser.setErrorHandler(std::make_shared<BailErrorStrategy>());\n"
+                << "            try { parser." << a.matcher << "(); matched[count++] = " << k
+                << "; break; } catch (...) {}\n"
+                << "        }\n"
+                << "    }\n";
+        }
     }
-    out << "                }\n"
-        << "                matched[count++] = k;\n"
-        << "                break;\n"
-        << "            } catch (...) {\n"
-        << "            }\n"
-        << "        }\n"
-        << "    }\n"
-        << "    return count;\n"
+    out << "    return count;\n"
         << "}\n";
     return out.str();
 }

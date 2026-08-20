@@ -50,7 +50,8 @@ static bool numbersEqual(antlr4::Token* a, antlr4::Token* b) {
 }
 
 static std::string unquote(const std::string& s) {
-    if (s.size() >= 2 && s.front() == '\'' && s.back() == '\'') {
+    if (s.size() >= 2 && (s.front() == '\'' || s.front() == '"') &&
+        s.back() == s.front()) {
         return s.substr(1, s.size() - 2);
     }
     return s;

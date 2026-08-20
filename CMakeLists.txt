@@ -121,6 +121,8 @@ foreach(rule_file ${RULE_FILES})
         DEPENDS rulec
                 ${rule_file}
                 ${CMAKE_CURRENT_SOURCE_DIR}/rule_plugin.h
+                ${CMAKE_CURRENT_SOURCE_DIR}/rules/_shared/SQLTokens.g4
+                ${CMAKE_CURRENT_SOURCE_DIR}/rules/_shared/RuleSQL.g4
         COMMENT "compile rule ${rule_file} -> ${plugin_so}"
         VERBATIM
     )
