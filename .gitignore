@@ -1,7 +1,7 @@
 # 构建产物
 build/
+build-*/
 engine
-examples/call_plugin
 rulec
 
 # 编译器中间产物

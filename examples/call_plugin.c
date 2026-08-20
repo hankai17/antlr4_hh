@@ -1,8 +1,9 @@
 /*
  * 最小动态库调用示例（纯 C，dlopen 方式）
  * ------------------------------------------------------------
- * 编译：gcc call_plugin.c -ldl -o call_plugin
- * 运行：./call_plugin        （插件路径/测试串见下方两个宏）
+ * 构建：cmake --build build --target example_call_plugin
+ * 运行：./build/example_call_plugin [可选测试串]
+ *       （默认测试串见 TEST_INPUT；插件路径见 PLUGIN_PATH）
  *
  * 展示如何调用规则插件 .so 的 C 接口：
  *   int         rule_abi()               版本号
@@ -16,6 +17,7 @@
  */
 #include <dlfcn.h>
 #include <stdio.h>
+#include <string.h>
 
 /* 与 rule_plugin.h 中 AttackInfo 布局一致（5 个 const char*） */
 typedef struct {
@@ -34,8 +36,12 @@ typedef int (*check_fn)(const char*, int*, int*, int*, int);
 /* ============ 移植时改这两个宏即可 ============ */
 #define PLUGIN_PATH "./build/plugins/libsqli_rules.so"
 #define TEST_INPUT  "SELECT * FROM users WHERE 1=1"
+#define MAX_MATCHES 16
+#define RULE_ABI    6
 
-int main(void) {
+int main(int argc, char* argv[]) {
+    const char* input = argc > 1 ? argv[1] : TEST_INPUT;
+
     void* h = dlopen(PLUGIN_PATH, RTLD_NOW);
     if (!h) {
         fprintf(stderr, "dlopen failed: %s\n", dlerror());
@@ -51,16 +57,25 @@ int main(void) {
         return 1;
     }
 
-    printf("ABI: %d, attacks: %d\n", abi(), count());
-    printf("input: %s\n\n", TEST_INPUT);
+    if (abi() != RULE_ABI) {
+        fprintf(stderr, "ABI mismatch: plugin=%d, expected=%d\n", abi(), RULE_ABI);
+        return 1;
+    }
 
-    int matched[16], startOff[16], endOff[16];
-    int n = check(TEST_INPUT, matched, startOff, endOff, 16);
+    printf("ABI: %d, attacks: %d\n", abi(), count());
+    printf("input: %s\n\n", input);
+
+    int matched[MAX_MATCHES], startOff[MAX_MATCHES], endOff[MAX_MATCHES];
+    int n = check(input, matched, startOff, endOff, MAX_MATCHES);
     for (int i = 0; i < n; ++i) {
         const AttackInfo* a = info(matched[i]);
+        if (!a) continue;
         printf("attack: %s [%s] %s\n", a->name, a->severity, a->description);
-        printf("        matched: %.*s\n",
-               endOff[i] - startOff[i] + 1, TEST_INPUT + startOff[i]);
+        if (startOff[i] >= 0 && endOff[i] >= startOff[i] &&
+            endOff[i] < (int)strlen(input)) {
+            printf("        matched: %.*s\n",
+                   endOff[i] - startOff[i] + 1, input + startOff[i]);
+        }
     }
     printf("\ntotal matched: %d\n", n);
 

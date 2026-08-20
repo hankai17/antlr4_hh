@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(rule_engine LANGUAGES CXX)
+project(rule_engine LANGUAGES C CXX)
 
 # ------------------------------------------------------------
 # 全局编译选项
@@ -8,9 +8,24 @@ project(rule_engine LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ------------------------------------------------------------
+# 构建类型：默认 Debug（可调试）；Release 为高性能优化版
+#   cmake -S . -B build                     # Debug（默认）
+#   cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+# ------------------------------------------------------------
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Debug)
 endif()
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+# Release 高性能：-O3 + LTO（引擎/编译器）
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(RULE_PLUGIN_OPT "-O3 -DNDEBUG -flto")
+else()
+    set(RULE_PLUGIN_OPT "-g -O0")
+endif()
+
 add_compile_options(-Wall -Wextra)
 
 # ------------------------------------------------------------
@@ -92,6 +107,8 @@ add_executable(engine
     engine.cc
     ${MINISQL_GEN_SOURCES}
 )
+set_property(TARGET engine
+    PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 target_include_directories(engine PRIVATE ${MINISQL_GEN_DIR})
 target_link_libraries(engine PRIVATE antlr4-runtime ${CMAKE_DL_LIBS})
 
@@ -102,6 +119,8 @@ target_link_libraries(engine PRIVATE antlr4-runtime ${CMAKE_DL_LIBS})
 add_executable(rulec
     rule_compiler.cc
 )
+set_property(TARGET rulec
+    PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 target_link_libraries(rulec PRIVATE antlr4-runtime)
 
 # ------------------------------------------------------------
@@ -130,6 +149,7 @@ foreach(rule_file ${RULE_FILES})
                 --antlr-inc ${ANTLR4_RUNTIME_INC_FOUND}
                 --antlr-lib ${ANTLR4_RUNTIME_LIB_DIR_FOUND}
                 --shared-dir ${CMAKE_CURRENT_SOURCE_DIR}/rules/_shared
+                --plugin-opt "${RULE_PLUGIN_OPT}"
                 ${rule_file}
         DEPENDS rulec
                 ${rule_file}
@@ -167,3 +187,11 @@ add_custom_target(validate
     COMMENT "validate sqli rules against positive/negative samples"
     VERBATIM
 )
+
+# ------------------------------------------------------------
+# 目标 6：最小动态库调用示例（纯 C，dlopen 调用插件接口）
+#   运行：./build/example_call_plugin [可选测试串]
+# ------------------------------------------------------------
+
+add_executable(example_call_plugin examples/call_plugin.c)
+target_link_libraries(example_call_plugin PRIVATE ${CMAKE_DL_LIBS})

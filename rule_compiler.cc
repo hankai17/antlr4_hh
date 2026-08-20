@@ -232,7 +232,8 @@ std::string generateWrapper(const std::vector<AttackMeta>& attacks, const std::s
 int compileAntlrRule(const std::vector<AttackMeta>& attacks, const std::string& ruleFile,
                      const std::string& outDir, const std::string& includeDir,
                      const std::string& sharedSrc, const std::string& jar,
-                     const std::string& antlrInc, const std::string& antlrLib) {
+                     const std::string& antlrInc, const std::string& antlrLib,
+                     const std::string& pluginOpt) {
     const std::string cls = baseName(ruleFile);
     const std::string absOut = std::filesystem::absolute(outDir).string();
     const std::string genDir = absOut + "/gen";
@@ -265,7 +266,7 @@ int compileAntlrRule(const std::vector<AttackMeta>& attacks, const std::string& 
     // 3) 编译 .so（共享词法 + 规则解析器 + wrapper）
     // 插件名与规则库文件名一致（如 sqli_rules.g4 -> libsqli_rules.so）
     std::string soPath = absOut + "/lib" + cls + ".so";
-    cmd = "g++ -std=c++17 -O2 -fPIC -shared -I" + includeDir + " -I" + antlrInc +
+    cmd = "g++ -std=c++17 " + pluginOpt + " -fPIC -shared -I" + includeDir + " -I" + antlrInc +
           " -I" + sharedOut + " -I" + genDir + " " + wrapperPath + " " +
           genDir + "/" + cls + ".cpp " + sharedOut + "/SQLTokens.cpp -L" +
           antlrLib + " -lantlr4-runtime -Wl,-rpath," + antlrLib + " -o " + soPath;
@@ -279,7 +280,7 @@ int compileAntlrRule(const std::vector<AttackMeta>& attacks, const std::string& 
     for (const auto& a : attacks) {
         std::cout << " [" << a.name << "/" << a.severity << "/" << a.profile << "]";
     }
-    std::cout << "\n";
+    std::cout << "\n        opt=\"" << pluginOpt << "\"\n";
     return 0;
 }
 
@@ -293,6 +294,7 @@ int main(int argc, char* argv[]) {
     std::string antlrInc;
     std::string antlrLib;
     std::string sharedDir = "rules/_shared";
+    std::string pluginOpt = "-O2";
 
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
@@ -302,6 +304,7 @@ int main(int argc, char* argv[]) {
         else if (a == "--antlr-inc" && i + 1 < argc) antlrInc = argv[++i];
         else if (a == "--antlr-lib" && i + 1 < argc) antlrLib = argv[++i];
         else if (a == "--shared-dir" && i + 1 < argc) sharedDir = argv[++i];
+        else if (a == "--plugin-opt" && i + 1 < argc) pluginOpt = argv[++i];
         else ruleFile = a;
     }
 
@@ -325,5 +328,5 @@ int main(int argc, char* argv[]) {
         return 2;
     }
     return compileAntlrRule(attacks, ruleFile, outDir, includeDir, sharedDir,
-                            antlrJar, antlrInc, antlrLib);
+                            antlrJar, antlrInc, antlrLib, pluginOpt);
 }
