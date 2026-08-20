@@ -128,7 +128,7 @@ target_link_libraries(rulec PRIVATE antlr4-runtime)
 # ------------------------------------------------------------
 
 file(GLOB RULE_FILES CONFIGURE_DEPENDS
-    ${CMAKE_CURRENT_SOURCE_DIR}/rules/sqli/*.g4
+    ${CMAKE_CURRENT_SOURCE_DIR}/rules/sqli/sqli_rules.g4
     ${CMAKE_CURRENT_SOURCE_DIR}/rules/xss/*.g4
 )
 
