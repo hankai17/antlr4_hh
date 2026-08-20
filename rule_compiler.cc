@@ -2,13 +2,13 @@
 // rulec — 规则编译器（ANTLR 语法规则）
 // ------------------------------------------------------------
 // 输入：rules/**/*.g4（标准 ANTLR parser grammar + 元数据注释）
-// 输出：lib<name>_rule.so（独立插件，导出 rule_check_text）
+// 输出：lib<name>.so（独立插件，导出 rule_check_text）
 //
 // 流水线：
 //   rules/sqli/sleep.g4（ANTLR 语法，import RuleSQL）
 //     --java--> sleep.{h,cpp}（规则解析器）
 //     + wrapper + 共享词法 SQLTokens
-//     --g++ -shared--> libsleep_rule.so
+//     --g++ -shared--> libsleep.so
 //
 // 插件只依赖 rule_plugin.h 与 ANTLR 运行时，可独立分发、热加载。
 // ============================================================
@@ -263,7 +263,8 @@ int compileAntlrRule(const std::vector<AttackMeta>& attacks, const std::string& 
     if (!writeFile(wrapperPath, generateWrapper(attacks, cls))) return 1;
 
     // 3) 编译 .so（共享词法 + 规则解析器 + wrapper）
-    std::string soPath = absOut + "/lib" + attacks[0].name + "_rule.so";
+    // 插件名与规则库文件名一致（如 sqli_rules.g4 -> libsqli_rules.so）
+    std::string soPath = absOut + "/lib" + cls + ".so";
     cmd = "g++ -std=c++17 -O2 -fPIC -shared -I" + includeDir + " -I" + antlrInc +
           " -I" + sharedOut + " -I" + genDir + " " + wrapperPath + " " +
           genDir + "/" + cls + ".cpp " + sharedOut + "/SQLTokens.cpp -L" +

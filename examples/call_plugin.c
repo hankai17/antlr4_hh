@@ -32,7 +32,7 @@ typedef const AttackInfo* (*info_fn)(int);
 typedef int (*check_fn)(const char*, int*, int*, int*, int);
 
 /* ============ 移植时改这两个宏即可 ============ */
-#define PLUGIN_PATH "./build/plugins/libalways_true_rule.so"
+#define PLUGIN_PATH "./build/plugins/libsqli_rules.so"
 #define TEST_INPUT  "SELECT * FROM users WHERE 1=1"
 
 int main(void) {

@@ -106,7 +106,7 @@ file(MAKE_DIRECTORY ${PLUGIN_OUT_DIR})
 set(PLUGIN_SOS "")
 foreach(rule_file ${RULE_FILES})
     get_filename_component(rule_name ${rule_file} NAME_WE)
-    set(plugin_so ${PLUGIN_OUT_DIR}/lib${rule_name}_rule.so)
+    set(plugin_so ${PLUGIN_OUT_DIR}/lib${rule_name}.so)
     add_custom_command(
         OUTPUT ${plugin_so}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${PLUGIN_OUT_DIR}

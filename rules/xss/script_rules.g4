@@ -4,7 +4,7 @@
 // description: XSS：<script> 标签
 // profile: raw
 
-parser grammar script_tag;
+parser grammar script_rules;
 
 options { tokenVocab = SQLTokens; }
 

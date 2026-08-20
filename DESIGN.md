@@ -15,7 +15,7 @@ Rule Compiler (rulec)
    |
    | 代码生成 + g++ -shared
    v
-lib<rule>_rule.so   <-------- 独立插件，dlopen 热加载
+lib<rule>.so   <-------- 独立插件，dlopen 热加载
    |
    v
 主引擎（不修改、不重编译）
@@ -154,7 +154,7 @@ rules/sqli/always_true.g4（ANTLR 语法 + 元数据注释）
 build/plugins/gen/always_true.{h,cpp} + wrapper
    │ g++ -shared
    ▼
-libalways_true_rule.so（text 模式：对归一化文本 token 流匹配）
+libsqli_rules.so（text 模式：对归一化文本 token 流匹配）
 ```
 
 - 共享词法 `SQLTokens.g4`：关键字映射、引号容错（字面量 vs 分隔引号）、未知字符跳过
@@ -195,7 +195,7 @@ rules/sqli/sleep.g4
    |
    | g++ -shared（共享词法 SQLTokens + 规则解析器 + wrapper）
    v
-build/plugins/libsleep_rule.so
+build/plugins/libsleep.so
 ```
 
 插件导出 `rule_check_text(const char*)`：对归一化文本做共享词法 +

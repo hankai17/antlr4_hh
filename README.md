@@ -10,7 +10,7 @@
 安全人员编写标准 ANTLR 语法规则（.g4）
         |
         v
-   Rule Compiler (rulec)  ── java 生成解析器 + g++ -shared ──>  lib<rule>_rule.so
+   Rule Compiler (rulec)  ── java 生成解析器 + g++ -shared ──>  lib<rule>.so
         |
         v
    主引擎 dlopen 加载调用（不修改、不重编译）
