@@ -97,38 +97,49 @@ static bool constStringsEqual(antlr4::ParserRuleContext* a,
 }
 
 // ----------------------------------------------------------
-// 表达式骨架
+// 表达式骨架（层级参考 sql_parser.t）：
+//   expr_or -> expr_and -> expr_not -> expr_binary(比较/IS/BETWEEN/IN/LIKE/EXISTS)
+//   -> expr_comparison(< <= > >=) -> expr_bitwise -> expr_addition(+-)
+//   -> expr_multiplication(* / %) -> expr_string(||) -> expr_unary
+//   -> expr_base(字面量/标识符/函数/括号/子查询)
 // ----------------------------------------------------------
 
-expr     : or_expr ;
-or_expr  : and_expr (OR and_expr)* ;
-and_expr : not_expr (AND not_expr)* ;
-not_expr : NOT not_expr | comparison ;
+expr     : expr_or ;
+expr_or  : expr_and (OR expr_and)* ;
+expr_and : expr_not (AND expr_not)* ;
+expr_not : NOT expr_not | expr_binary ;
 
-comparison : add_expr (cmp_op add_expr)? ;
-cmp_op     : EQ | NE | LT | LE | GT | GE ;
-
-add_expr : mul_expr (add_op mul_expr)* ;
-add_op   : PLUS | MINUS | PIPE2 ;
-mul_expr : unary_expr (mul_op unary_expr)* ;
-mul_op   : STAR | DIV | MOD ;
-
-unary_expr
-    : (PLUS | MINUS) unary_expr
-    | primary
+expr_binary : expr_comparison expr_binary_tail* ;
+expr_binary_tail
+    : compare_operator expr_comparison
+    | is_null_operator
+    | NOT? BETWEEN expr_comparison AND expr_comparison
+    | NOT? IN LPAREN (select_stmt | expr_list) RPAREN
+    | NOT? LIKE expr_comparison
+    | NOT? EXISTS LPAREN select_stmt RPAREN
     ;
 
-primary
-    : NUMBER
-    | STRING
-    | TRUE
-    | FALSE
-    | NULL
+compare_operator : EQ | NE | LT | LE | GT | GE ;
+is_null_operator : IS NOT? (NULL | TRUE | FALSE) ;
+
+expr_comparison : expr_bitwise ((LT | LE | GT | GE) expr_bitwise)* ;
+expr_bitwise    : expr_addition ;   // SQLTokens 无 << >> & | token，保留层级占位
+expr_addition   : expr_multiplication ((PLUS | MINUS) expr_multiplication)* ;
+expr_multiplication : expr_string ((STAR | DIV | MOD) expr_string)* ;
+expr_string     : expr_unary (PIPE2 expr_unary)* ;
+expr_unary      : (PLUS | MINUS)* expr_base ;
+
+expr_base
+    : literal_value
     | IDENT (LPAREN expr_list? RPAREN)?
+    | (NOT? EXISTS)? LPAREN select_stmt RPAREN
     | LPAREN expr RPAREN
     ;
 
-expr_list : expr (COMMA expr)* ;
+literal_value : NUMBER | STRING | TRUE | FALSE | NULL ;
+
+expr_list      : expr (COMMA expr)* ;
+expr_recursive : LPAREN expr_list RPAREN ;   // 参考 sql_parser.t 的括号表达式
 
 // ----------------------------------------------------------
 // 最小 SELECT 形状（用于子查询/片段识别，非完整 SELECT 语法）

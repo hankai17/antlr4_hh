@@ -39,8 +39,8 @@ string_tautology_pat
 // description: 布尔型注入：OR/AND 一侧为常量比较
 // profile: sql
 boolean_injection_pat
-    : const_cmp (OR | AND) comparison
-    | comparison (OR | AND) const_cmp
+    : const_cmp (OR | AND) expr_binary
+    | expr_binary (OR | AND) const_cmp
     ;
 
 const_cmp
@@ -111,30 +111,30 @@ exists_subquery_pat
 // action: ALLOW
 // description: IN 子查询结构检测
 // profile: sql
-in_subquery_pat : add_expr NOT? IN LPAREN select_stmt RPAREN ;
+in_subquery_pat : expr_addition NOT? IN LPAREN select_stmt RPAREN ;
 
 // attack: like_expr
 // severity: LOW
 // action: ALLOW
 // description: LIKE 表达式结构检测
 // profile: sql
-like_expr_pat : add_expr NOT? LIKE add_expr ;
+like_expr_pat : expr_comparison NOT? LIKE expr_comparison ;
 
 // attack: between_expr
 // severity: LOW
 // action: ALLOW
 // description: BETWEEN 表达式结构检测
 // profile: sql
-between_expr_pat : add_expr NOT? BETWEEN add_expr AND add_expr ;
+between_expr_pat : expr_comparison NOT? BETWEEN expr_comparison AND expr_comparison ;
 
 // attack: numeric_expr
 // severity: LOW
 // action: ALLOW
 // description: 数值表达式比较（如 1+1=2）
 // profile: sql
-numeric_expr_pat : arith EQ add_expr ;
+numeric_expr_pat : arith EQ expr_addition ;
 
-arith : mul_expr (add_op mul_expr)+ ;
+arith : expr_multiplication ((PLUS | MINUS) expr_multiplication)+ ;
 
 // attack: order_by_expr
 // severity: LOW
@@ -155,7 +155,7 @@ limit_expr_pat : LIMIT expr (OFFSET expr)? ;
 // action: ALLOW
 // description: 字符串拼接特征 ||
 // profile: sql
-string_concat_pat : add_expr PIPE2 add_expr ;
+string_concat_pat : expr_string PIPE2 expr_string ;
 
 // attack: insert_fragment
 // severity: MEDIUM
