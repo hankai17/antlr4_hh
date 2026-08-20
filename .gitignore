@@ -1,6 +1,6 @@
 # 构建产物
 build/
-waf
+engine
 rulec
 
 # 编译器中间产物

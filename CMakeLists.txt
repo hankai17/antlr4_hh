@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(compiled_waf LANGUAGES CXX)
+project(rule_engine LANGUAGES CXX)
 
 # ------------------------------------------------------------
 # 全局编译选项
@@ -72,15 +72,15 @@ add_custom_command(
 )
 
 # ------------------------------------------------------------
-# 目标 1：WAF 主引擎
+# 目标 1：主引擎
 # ------------------------------------------------------------
 
-add_executable(waf
-    waf.cc
+add_executable(engine
+    engine.cc
     ${MINISQL_GEN_SOURCES}
 )
-target_include_directories(waf PRIVATE ${MINISQL_GEN_DIR})
-target_link_libraries(waf PRIVATE antlr4-runtime ${CMAKE_DL_LIBS})
+target_include_directories(engine PRIVATE ${MINISQL_GEN_DIR})
+target_link_libraries(engine PRIVATE antlr4-runtime ${CMAKE_DL_LIBS})
 
 # ------------------------------------------------------------
 # 目标 2：规则编译器 rulec
@@ -135,9 +135,9 @@ add_custom_target(plugins ALL DEPENDS ${PLUGIN_SOS})
 
 add_custom_target(demo
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/demo.sh
-            $<TARGET_FILE:waf>
+            $<TARGET_FILE:engine>
             ${PLUGIN_OUT_DIR}
-    DEPENDS waf plugins
+    DEPENDS engine plugins
     COMMENT "run end-to-end demo (benign / SQLi / XSS samples)"
     VERBATIM
 )
@@ -148,9 +148,9 @@ add_custom_target(demo
 
 add_custom_target(validate
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/validate_sqli.sh
-            $<TARGET_FILE:waf>
+            $<TARGET_FILE:engine>
             ${PLUGIN_OUT_DIR}
-    DEPENDS waf plugins
+    DEPENDS engine plugins
     COMMENT "validate sqli rules against positive/negative samples"
     VERBATIM
 )

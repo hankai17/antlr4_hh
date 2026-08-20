@@ -2,17 +2,17 @@
 # ============================================================
 # SQLi 规则校验器
 # ------------------------------------------------------------
-# 对每个样本运行 waf，断言：
+# 对每个样本运行 engine，断言：
 #   BLOCK  <rule>  期望命中规则并拦截
 #   ALLOW  <rule>  期望命中规则但放行（检测型规则）
 #   UNKNOWN <rule> 期望命中规则但解析失败（fragment 检测）
 #   NONE          期望无规则命中且 ALLOW（负样本）
 #
-# usage: validate_sqli.sh <waf_binary> <rules_dir>
+# usage: validate_sqli.sh <engine_binary> <rules_dir>
 # ============================================================
 set -u
 
-WAF="$1"
+ENGINE="$1"
 RULES="$2"
 pass=0
 fail=0
@@ -20,7 +20,7 @@ fail=0
 check() {
     local payload="$1" expect_verdict="$2" expect_rule="${3:-}"
     local out got ok=1
-    out=$("$WAF" --rules "$RULES" "$payload" 2>&1)
+    out=$("$ENGINE" --rules "$RULES" "$payload" 2>&1)
     # 取最后一个判定词（VERDICT: xxx 或 FAST PATH ... -> ALLOW）
     got=$(printf '%s\n' "$out" | grep -Eo 'ALLOW|BLOCK|UNKNOWN' | tail -1)
 

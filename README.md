@@ -1,8 +1,8 @@
-# 编译型 WAF 规则系统
+# 编译型规则引擎
 
-一个"规则可编译、插件化、高性能、语义级检测"的 WAF 规则平台：
+一个"规则可编译、插件化、高性能、语义级检测"的 规则引擎平台：
 安全人员用**标准 ANTLR 语法（.g4）**写攻击检测规则，`rulec` 编译器把每条规则
-编译成独立的 C++ 匹配插件（.so），WAF 主引擎 `dlopen` 热加载，
+编译成独立的 C++ 匹配插件（.so），主引擎 `dlopen` 热加载，
 在归一化文本的 token 流上逐位置匹配，判定 ALLOW / BLOCK / UNKNOWN。
 全程不需要修改、重新编译主引擎。
 
@@ -13,7 +13,7 @@
    Rule Compiler (rulec)  ── java 生成解析器 + g++ -shared ──>  lib<rule>_rule.so
         |
         v
-   WAF 主引擎 dlopen 加载调用（不修改、不重编译）
+   主引擎 dlopen 加载调用（不修改、不重编译）
 ```
 
 ## 整体架构与数据流
@@ -31,7 +31,7 @@ Fast Path           廉价预筛（子串扫描，生产可升级 DFA），无�
 SQL Parser          ANTLR4 + MiniSQL.g4（判定"是否完整可解析的 SQL"）
    |
    v
-Rule Engine         逐个执行规则插件 waf_rule_check_text(归一化文本)
+Rule Engine         逐个执行规则插件 rule_check_text(归一化文本)
    |
    v
 ALLOW / BLOCK / UNKNOWN
@@ -80,11 +80,11 @@ verdict 规则：
 片段场景实测：
 
 ```bash
-./build/waf "1 OR 1=1"              # BLOCK（always_true + boolean_injection）
-./build/waf "2=2"                   # BLOCK（always_true）
-./build/waf "UNION SELECT 1,2,3"    # BLOCK（union_select）
-./build/waf "admin' OR '1'='1' --"  # BLOCK（string_tautology，引号容错）
-./build/waf "id=1"                  # UNKNOWN（无法识别且无规则命中）
+./build/engine "1 OR 1=1"              # BLOCK（always_true + boolean_injection）
+./build/engine "2=2"                   # BLOCK（always_true）
+./build/engine "UNION SELECT 1,2,3"    # BLOCK（union_select）
+./build/engine "admin' OR '1'='1' --"  # BLOCK（string_tautology，引号容错）
+./build/engine "id=1"                  # UNKNOWN（无法识别且无规则命中）
 ```
 
 已知边界：生产环境仍需对 charset、双重编码、嵌套引号等做升级
@@ -97,8 +97,8 @@ verdict 规则：
 | 完整 SQL 判定 | `MiniSQL.g4` | fullSqlOk 门控（fragment/raw 画像）与 UNKNOWN 判定 |
 | 共享规则语法 | `rules/_shared/` | `SQLTokens.g4`（词法）+ `SQLExpr.g4`（表达式/语句 + 语义谓词） |
 | 规则编译器 | `rule_compiler.cc` | ANTLR 语法规则 → 生成解析器 → `g++ -shared` → `.so` |
-| 插件 ABI | `rule_plugin.h` | `waf_rule_abi / waf_rule_info / waf_rule_check_text` |
-| 主引擎 | `waf.cc` | Normalization → Fast Path → 解析判定 → Rule Engine → Verdict |
+| 插件 ABI | `rule_plugin.h` | `rule_abi / rule_info / rule_check_text` |
+| 主引擎 | `engine.cc` | Normalization → Fast Path → 解析判定 → Rule Engine → Verdict |
 | 规则集 | `rules/` | `rules/sqli/`（24 条）+ `rules/xss/`（1 条） |
 | 校验逻辑 | `validate_sqli.sh` | 47 个正/负样本断言，验证规则不误报、不漏报 |
 
@@ -151,7 +151,7 @@ pattern : l=NUMBER EQ r=NUMBER {numbersEqual($l, $r)}? ;
 
 ```bash
 cmake -S . -B build                 # 配置（默认 Release）
-cmake --build build -j              # 构建 waf + rulec + 全部规则插件（ANTLR 自动生成）
+cmake --build build -j              # 构建 engine + rulec + 全部规则插件（ANTLR 自动生成）
 cmake --build build --target demo   # 端到端演示（11 个样本）
 cmake --build build --target validate  # 规则校验（47 个正/负样本断言）
 ```
@@ -159,13 +159,13 @@ cmake --build build --target validate  # 规则校验（47 个正/负样本断�
 手工检测：
 
 ```bash
-./build/waf "SELECT * FROM users WHERE 1=1"                    # BLOCK: always_true
-./build/waf "SELECT * FROM t WHERE a=1 OR 1=2"                 # BLOCK: boolean_injection
-./build/waf "SELECT id FROM a UNION SELECT pwd FROM admin"     # BLOCK: union_select
-./build/waf "1;DROP TABLE users"                               # BLOCK: stacked_query
-./build/waf "GET /q?x=<script>alert(1)</script>"               # BLOCK: script_tag
-./build/waf "SELECT name FROM users WHERE id = 1"              # ALLOW（无规则命中）
-./build/waf --fail-closed "hello union world"                  # 解析失败 -> BLOCK（默认 UNKNOWN）
+./build/engine "SELECT * FROM users WHERE 1=1"                    # BLOCK: always_true
+./build/engine "SELECT * FROM t WHERE a=1 OR 1=2"                 # BLOCK: boolean_injection
+./build/engine "SELECT id FROM a UNION SELECT pwd FROM admin"     # BLOCK: union_select
+./build/engine "1;DROP TABLE users"                               # BLOCK: stacked_query
+./build/engine "GET /q?x=<script>alert(1)</script>"               # BLOCK: script_tag
+./build/engine "SELECT name FROM users WHERE id = 1"              # ALLOW（无规则命中）
+./build/engine --fail-closed "hello union world"                  # 解析失败 -> BLOCK（默认 UNKNOWN）
 ```
 
 ### 新增一条规则（安全人员视角，不碰 C++）
@@ -192,7 +192,7 @@ pattern : i=IDENT {isIdent($i, "benchmark")}? LPAREN expr_list? RPAREN ;
 
 ```bash
 cmake --build build --target plugins
-./build/waf "SELECT BENCHMARK(10000000, MD5('x'))"
+./build/engine "SELECT BENCHMARK(10000000, MD5('x'))"
 ```
 
 ## 验证结果
@@ -209,7 +209,7 @@ cmake --build build --target plugins
 ├── MiniSQL.g4           # 完整 SQL 判定语法（构建时自动生成解析器到 build/gen/）
 ├── rule_plugin.h        # 插件 ABI
 ├── rule_compiler.cc     # rulec：ANTLR 规则语法 -> 解析器 -> .so
-├── waf.cc               # 主引擎
+├── engine.cc               # 主引擎
 ├── CMakeLists.txt       # 构建（含 ANTLR 自动生成，生成物不入库）
 ├── demo.sh              # 端到端演示脚本
 ├── validate_sqli.sh     # 规则校验逻辑

@@ -1,5 +1,5 @@
 // ============================================================
-// waf — 编译型 WAF 规则系统主引擎
+// engine — 编译型规则引擎主程序
 // ------------------------------------------------------------
 // 请求处理流水线：
 //   HTTP payload
@@ -123,27 +123,27 @@ std::vector<LoadedRule> loadRules(const std::string& dir) {
     for (const auto& path : listPlugins(dir)) {
         void* handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
         if (!handle) {
-            std::cerr << "[waf] load failed: " << path << " : " << dlerror() << "\n";
+            std::cerr << "[engine] load failed: " << path << " : " << dlerror() << "\n";
             continue;
         }
 
-        auto abi = reinterpret_cast<int (*)()>(dlsym(handle, "waf_rule_abi"));
-        auto infoFn = reinterpret_cast<const waf::RuleInfo* (*)()>(dlsym(handle, "waf_rule_info"));
+        auto abi = reinterpret_cast<int (*)()>(dlsym(handle, "rule_abi"));
+        auto infoFn = reinterpret_cast<const rule::RuleInfo* (*)()>(dlsym(handle, "rule_info"));
         auto checkText = reinterpret_cast<bool (*)(const char*)>(
-            dlsym(handle, "waf_rule_check_text"));
+            dlsym(handle, "rule_check_text"));
         if (!abi || !infoFn || !checkText) {
-            std::cerr << "[waf] bad plugin symbols: " << path << "\n";
+            std::cerr << "[engine] bad plugin symbols: " << path << "\n";
             dlclose(handle);
             continue;
         }
-        if (abi() != waf::WAF_RULE_ABI) {
-            std::cerr << "[waf] ABI mismatch (plugin=" << abi()
-                      << ", engine=" << waf::WAF_RULE_ABI << "): " << path << "\n";
+        if (abi() != rule::RULE_ABI) {
+            std::cerr << "[engine] ABI mismatch (plugin=" << abi()
+                      << ", engine=" << rule::RULE_ABI << "): " << path << "\n";
             dlclose(handle);
             continue;
         }
 
-        const waf::RuleInfo* info = infoFn();
+        const rule::RuleInfo* info = infoFn();
         LoadedRule r;
         r.handle = handle;
         r.name = info->name;
@@ -226,11 +226,11 @@ int main(int argc, char* argv[]) {
     }
 
     if (payload.empty()) {
-        std::cerr << "usage: waf [--rules DIR] [--fail-closed] \"payload\"\n";
+        std::cerr << "usage: engine [--rules DIR] [--fail-closed] \"payload\"\n";
         return 2;
     }
 
-    std::cout << "== Compiled WAF Rule Engine ==\n";
+    std::cout << "== Compiled Rule Engine ==\n";
     std::cout << "INPUT:  " << payload << "\n";
 
     // 1. Normalization
@@ -250,7 +250,7 @@ int main(int argc, char* argv[]) {
     // 3. 加载规则插件
     std::vector<LoadedRule> rules = loadRules(rulesDir);
     if (rules.empty()) {
-        std::cerr << "[waf] no rule plugins loaded from " << rulesDir << "\n";
+        std::cerr << "[engine] no rule plugins loaded from " << rulesDir << "\n";
         return 1;
     }
     std::cout << "RULES (" << rules.size() << " loaded from " << rulesDir << "):\n";

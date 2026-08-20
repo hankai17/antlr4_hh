@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # 端到端演示：良性 / SQLi / XSS 样本
-# usage: demo.sh <waf_binary> <rules_dir>
+# usage: demo.sh <engine_binary> <rules_dir>
 set -u
 
-WAF="$1"
+ENGINE="$1"
 RULES_DIR="$2"
 
 run() {
     echo
     echo "#### $1"
     shift
-    "$WAF" --rules "$RULES_DIR" "$@" || true
+    "$ENGINE" --rules "$RULES_DIR" "$@" || true
 }
 
 run "1. 良性 SQL（期望 ALLOW）"                  "SELECT name FROM users WHERE id = 1"

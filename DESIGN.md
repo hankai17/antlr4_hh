@@ -1,8 +1,8 @@
-# 编译型 WAF 规则系统设计
+# 编译型规则引擎设计
 
 ## 1. 目标
 
-让**安全人员**只写 `.g4` 规则文件，就能把新的攻击检测能力编译成 C++ 插件并注入 WAF，
+让**安全人员**只写 `.g4` 规则文件，就能把新的攻击检测能力编译成 C++ 插件并注入规则引擎，
 全程**不需要修改、重新编译主引擎**。检测建立在**语义层**（AST）而不是字符串层：
 规则描述"攻击长什么样"，而不是"攻击文本里有什么"。
 
@@ -18,7 +18,7 @@ Rule Compiler (rulec)
 lib<rule>_rule.so   <-------- 独立插件，dlopen 热加载
    |
    v
-WAF 主引擎（不修改、不重编译）
+主引擎（不修改、不重编译）
 ```
 
 ## 2. 总体架构与数据流
@@ -43,7 +43,7 @@ Fragment Parser     容错词法 + 片段解析（引号不平衡也能产出 AS
 AST                 语义中间层（规则唯一可见的数据）
    |
    v
-Rule Engine         逐个 dlopen 插件执行 waf_rule_check(ast)
+Rule Engine         逐个 dlopen 插件执行 rule_check_text(归一化文本)
    |                 命中 BLOCK 规则 -> BLOCK
    v
 ALLOW / BLOCK / UNKNOWN
@@ -191,14 +191,14 @@ rules/sqli/sleep.g4
    |
    | java 生成规则解析器（import SQLExpr / tokenVocab=SQLTokens）
    v
-规则解析器 sleep.{h,cpp} + wrapper（waf_rule_check_text）
+规则解析器 sleep.{h,cpp} + wrapper（rule_check_text）
    |
    | g++ -shared（共享词法 SQLTokens + 规则解析器 + wrapper）
    v
 build/plugins/libsleep_rule.so
 ```
 
-插件导出 `waf_rule_check_text(const char*)`：对归一化文本做共享词法 +
+插件导出 `rule_check_text(const char*)`：对归一化文本做共享词法 +
 逐位置尝试 `pattern`（BailErrorStrategy）；命中即返回 true。
 共享词法只生成一次（幂等），插件可独立分发、独立签名校验。
 
@@ -207,9 +207,9 @@ build/plugins/libsleep_rule.so
 每个 `.so` 导出三个 C 符号（`rule_plugin.h`）：
 
 ```cpp
-int       waf_rule_abi();                       // 版本协商，不匹配拒绝加载
-RuleInfo* waf_rule_info();                      // name / severity / action / description / profile
-bool      waf_rule_check(const AstNode& root);  // 语义匹配
+ int       rule_abi();                       // 版本协商，不匹配拒绝加载
+ RuleInfo* rule_info();                      // name / severity / action / description / profile
+ bool      rule_check_text(const char* text); // 对归一化文本做 token 匹配
 ```
 
 主引擎 `dlopen(RTLD_NOW|RTLD_LOCAL)` + `dlsym` 加载；加载失败、符号缺失、
@@ -238,7 +238,7 @@ ANTLR 适合复杂 CFG，但逐请求跑完整解析在高压下成本偏高。�
 ├── MiniSQL.g4            # SQL 结构语法（解析层）
 ├── rule_plugin.h         # 插件 ABI 契约
 ├── rule_compiler.cc      # rulec：ANTLR 规则语法 -> 解析器 -> .so
-├── waf.cc                # 主引擎：Normalization/FastPath/解析判定/RuleEngine
+├── engine.cc                # 主引擎：Normalization/FastPath/解析判定/RuleEngine
 ├── rules/
 │   ├── _shared/          # SQLTokens.g4 / SQLExpr.g4（规则共享词法与表达式语法）
 │   ├── sqli/             # SQLi 规则（标准 ANTLR 语法）
@@ -257,10 +257,10 @@ vi rules/sqli/benchmark.g4
 cmake --build build --target plugins
 
 # 3. 引擎热加载生效（原型为每次请求扫描插件目录；生产可做成 inotify 热更）
-./build/waf --rules build/plugins "SELECT BENCHMARK(1000000, MD5('x'))"
+./build/engine --rules build/plugins "SELECT BENCHMARK(1000000, MD5('x'))"
 ```
 
-（构建：`cmake -S . -B build && cmake --build build -j`；产物 `build/waf`、
+（构建：`cmake -S . -B build && cmake --build build -j`；产物 `build/engine`、
 `build/rulec`、`build/plugins/*.so`。ANTLR 生成物不入库，构建时自动生成到
 `build/gen/`（MiniSQL）与 `build/plugins/gen/`（规则解析器）；
 改语法后重新 `cmake --build build` 即自动重新生成。）

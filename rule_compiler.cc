@@ -1,8 +1,8 @@
 // ============================================================
-// rulec — WAF 规则编译器（ANTLR 语法规则）
+// rulec — 规则编译器（ANTLR 语法规则）
 // ------------------------------------------------------------
 // 输入：rules/**/*.g4（标准 ANTLR parser grammar + 元数据注释）
-// 输出：lib<name>_rule.so（独立插件，导出 waf_rule_check_text）
+// 输出：lib<name>_rule.so（独立插件，导出 rule_check_text）
 //
 // 流水线：
 //   rules/sqli/sleep.g4（ANTLR 语法，import SQLExpr）
@@ -140,9 +140,9 @@ std::string generateWrapper(const RuleMeta& m, const std::string& cls) {
         << "#include <string>\n"
         << "#include <vector>\n\n"
         << "using namespace antlr4;\n\n"
-        << "extern \"C\" int waf_rule_abi() { return waf::WAF_RULE_ABI; }\n\n"
-        << "extern \"C\" const waf::RuleInfo* waf_rule_info() {\n"
-        << "    static const waf::RuleInfo info = {\n"
+        << "extern \"C\" int rule_abi() { return rule::RULE_ABI; }\n\n"
+        << "extern \"C\" const rule::RuleInfo* rule_info() {\n"
+        << "    static const rule::RuleInfo info = {\n"
         << "        \"" << cppEscape(m.name) << "\",\n"
         << "        \"" << m.severity << "\",\n"
         << "        \"" << m.action << "\",\n"
@@ -151,7 +151,7 @@ std::string generateWrapper(const RuleMeta& m, const std::string& cls) {
         << "    };\n"
         << "    return &info;\n"
         << "}\n\n"
-        << "extern \"C\" bool waf_rule_check_text(const char* text) {\n"
+        << "extern \"C\" bool rule_check_text(const char* text) {\n"
         << "    ANTLRInputStream input(text ? text : \"\");\n"
         << "    SQLTokens lexer(&input);\n"
         << "    lexer.removeErrorListeners();\n"
