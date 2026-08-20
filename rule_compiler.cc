@@ -187,7 +187,8 @@ std::string generateWrapper(const std::vector<AttackMeta>& attacks, const std::s
         << "    if (i < 0 || i >= " << n << ") return nullptr;\n"
         << "    return &infos[i];\n"
         << "}\n\n"
-        << "extern \"C\" int rule_check_text(const char* text, int* matched, int max_matches) {\n"
+        << "extern \"C\" int rule_check_text(const char* text, int* matched,\n"
+        << "                                int* startOff, int* endOff, int max_matches) {\n"
         << "    ANTLRInputStream input(text ? text : \"\");\n"
         << "    SQLTokens lexer(&input);\n"
         << "    lexer.removeErrorListeners();\n"
@@ -212,7 +213,12 @@ std::string generateWrapper(const std::vector<AttackMeta>& attacks, const std::s
         out << "                    case " << i << ": parser." << attacks[i].matcher << "(); break;\n";
     }
     out << "                }\n"
-        << "                matched[count++] = k;\n"
+        << "                const int cur = parser.getCurrentToken()->getTokenIndex();\n"
+        << "                matched[count] = k;\n"
+        << "                startOff[count] = visible[i]->getStartIndex();\n"
+        << "                endOff[count] = cur > 0 ? tokens.get(cur - 1)->getStopIndex()"
+        << " : startOff[count];\n"
+        << "                ++count;\n"
         << "                break;\n"
         << "            } catch (...) {\n"
         << "            }\n"

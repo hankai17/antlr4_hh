@@ -101,7 +101,7 @@ struct LoadedPlugin {
     std::vector<rule::AttackInfo> attacks;   // 插件包含的攻击类型
     int (*countFn)() = nullptr;
     const rule::AttackInfo* (*infoFn)(int) = nullptr;
-    int (*checkText)(const char*, int*, int) = nullptr;  // 返回命中攻击索引数量
+    int (*checkText)(const char*, int*, int*, int*, int) = nullptr;  // 命中索引 + 字符区间
 };
 
 std::vector<std::string> listPlugins(const std::string& dir) {
@@ -129,7 +129,7 @@ std::vector<LoadedPlugin> loadRules(const std::string& dir) {
         auto countFn = reinterpret_cast<int (*)()>(dlsym(handle, "rule_attack_count"));
         auto infoFn = reinterpret_cast<const rule::AttackInfo* (*)(int)>(
             dlsym(handle, "rule_attack"));
-        auto checkText = reinterpret_cast<int (*)(const char*, int*, int)>(
+        auto checkText = reinterpret_cast<int (*)(const char*, int*, int*, int*, int)>(
             dlsym(handle, "rule_check_text"));
         if (!abi || !countFn || !infoFn || !checkText) {
             std::cerr << "[engine] bad plugin symbols: " << path << "\n";
@@ -286,11 +286,15 @@ int main(int argc, char* argv[]) {
     // 5. Rule Engine
     struct Matched {
         const rule::AttackInfo* attack;
+        int start = -1;
+        int end = -1;
     };
     std::vector<Matched> matched;
     for (const auto& r : rules) {
         int buf[64];
-        int n = r.checkText(normalized.c_str(), buf, 64);
+        int startOff[64];
+        int endOff[64];
+        int n = r.checkText(normalized.c_str(), buf, startOff, endOff, 64);
         for (int i = 0; i < n; ++i) {
             if (buf[i] < 0 || buf[i] >= static_cast<int>(r.attacks.size())) continue;
             const rule::AttackInfo* a = &r.attacks[buf[i]];
@@ -299,7 +303,7 @@ int main(int argc, char* argv[]) {
                 fullSqlOk) {
                 continue;
             }
-            matched.push_back({a});
+            matched.push_back({a, startOff[i], endOff[i]});
         }
     }
 
@@ -307,6 +311,11 @@ int main(int argc, char* argv[]) {
     for (const auto& m : matched) {
         std::cout << "  !! " << m.attack->name << " [" << m.attack->severity
                   << "] " << m.attack->description << "\n";
+        if (m.start >= 0 && m.start <= m.end &&
+            m.end < static_cast<int>(normalized.size())) {
+            std::cout << "      matched: \"" << normalized.substr(m.start, m.end - m.start + 1)
+                      << "\"\n";
+        }
     }
 
     // 6. Verdict：完整 SQL 或命中任意规则 => 已识别（ALLOW），否则 UNKNOWN

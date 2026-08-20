@@ -9,15 +9,17 @@
 //   int         rule_abi()          版本号，不匹配则拒绝加载
 //   int         rule_attack_count() 插件包含的攻击数量
 //   AttackInfo* rule_attack(int i)  第 i 个攻击的元信息
-//   int         rule_check_text(const char*, int* matched, int max)
-//                                    对归一化文本匹配，返回命中攻击索引数量
+//   int         rule_check_text(const char*, int* matched,
+//                               int* startOff, int* endOff, int max)
+//                                    对归一化文本匹配，返回命中攻击索引数量，
+//                                    并给出每个命中在输入中的字符区间（含端点）
 //
 // 主引擎通过 dlopen/dlsym 加载插件，热插拔；插件只需头文件，无需链接引擎。
 // ============================================================
 
 namespace rule {
 
-constexpr int RULE_ABI = 5;
+constexpr int RULE_ABI = 6;
 
 struct AttackInfo {
     const char* name;        // 攻击名，如 "sleep"
