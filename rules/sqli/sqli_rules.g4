@@ -16,14 +16,22 @@ import RuleSQL;
 // action: BLOCK
 // description: 恒真条件：两侧等值常量（1=1 / 2=2 / 1=1.0）
 // profile: sql
-always_true_pat : l=NUMBER EQ r=NUMBER {numbersEqual($l, $r)}? ;
+// 括号由 constant_value 语法处理，等值由 constNumbersEqual 谓词求值：
+// 1=1 / 2=2 / 1=(1) / (1)=(1) 均命中
+always_true_pat
+    : constant_value EQ constant_value
+      {constNumbersEqual(_localctx->constant_value(0), _localctx->constant_value(1))}?
+    ;
 
 // attack: string_tautology
 // severity: HIGH
 // action: BLOCK
 // description: 恒真条件：两侧等值字符串常量（'a'='a'）
 // profile: sql
-string_tautology_pat : l=STRING EQ r=STRING {stringsEqual($l, $r)}? ;
+string_tautology_pat
+    : constant_value EQ constant_value
+      {constStringsEqual(_localctx->constant_value(0), _localctx->constant_value(1))}?
+    ;
 
 // attack: boolean_injection
 // severity: MEDIUM
@@ -36,8 +44,7 @@ boolean_injection_pat
     ;
 
 const_cmp
-    : NUMBER EQ NUMBER
-    | STRING EQ STRING
+    : constant_value EQ constant_value
     ;
 
 // attack: union_select

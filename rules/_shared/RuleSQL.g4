@@ -59,6 +59,41 @@ static std::string unquote(const std::string& s) {
 static bool stringsEqual(antlr4::Token* a, antlr4::Token* b) {
     return unquote(a->getText()) == unquote(b->getText());
 }
+
+// ----------------------------------------------------------
+// 常量值求值（参考 sql_parser.t 的 expr_recursive：括号由语法处理，
+// 值语义由谓词提取）——1=(1) / (1)=1 / (1)=(1) 都解析为常量比较
+// 用通用 ParserRuleContext 遍历，避免依赖生成顺序靠后的上下文类型。
+// ----------------------------------------------------------
+static bool constLiteralText(antlr4::ParserRuleContext* c, int tokenType,
+                             std::string& val) {
+    if (!c) return false;
+    for (auto* child : c->children) {
+        if (auto* t = dynamic_cast<antlr4::tree::TerminalNode*>(child)) {
+            if (t->getSymbol()->getType() == tokenType) {
+                val = t->getText();
+                return true;
+            }
+        } else if (auto* pc = dynamic_cast<antlr4::ParserRuleContext*>(child)) {
+            if (constLiteralText(pc, tokenType, val)) return true;
+        }
+    }
+    return false;
+}
+
+static bool constNumbersEqual(antlr4::ParserRuleContext* a,
+                              antlr4::ParserRuleContext* b) {
+    std::string va, vb;
+    return constLiteralText(a, NUMBER, va) && constLiteralText(b, NUMBER, vb) &&
+           canonicalNumber(va) == canonicalNumber(vb);
+}
+
+static bool constStringsEqual(antlr4::ParserRuleContext* a,
+                              antlr4::ParserRuleContext* b) {
+    std::string va, vb;
+    return constLiteralText(a, STRING, va) && constLiteralText(b, STRING, vb) &&
+           unquote(va) == unquote(vb);
+}
 }
 
 // ----------------------------------------------------------
@@ -106,3 +141,16 @@ select_stmt
     ;
 
 table_ref : IDENT | LPAREN select_stmt RPAREN ;
+
+// ----------------------------------------------------------
+// 常量值：字面量或任意层括号包裹（1 / (1) / ((1))）
+// ----------------------------------------------------------
+
+constant_value
+    : NUMBER
+    | STRING
+    | TRUE
+    | FALSE
+    | NULL
+    | LPAREN constant_value RPAREN
+    ;
