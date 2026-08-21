@@ -18,6 +18,7 @@ import RuleSQL;
 // profile: sql
 // 括号由 constant_value 语法处理，等值由 constNumbersEqual 谓词求值：
 // 1=1 / 2=2 / 1=(1) / (1)=(1) 均命中
+// start: NUMBER STRING TRUE FALSE NULL LPAREN
 always_true_pat
     : constant_value EQ constant_value
       {constNumbersEqual(_localctx->constant_value(0), _localctx->constant_value(1))}?
@@ -28,6 +29,7 @@ always_true_pat
 // action: BLOCK
 // description: 恒真条件：两侧等值字符串常量（'a'='a'）
 // profile: sql
+// start: NUMBER STRING TRUE FALSE NULL LPAREN
 string_tautology_pat
     : constant_value EQ constant_value
       {constStringsEqual(_localctx->constant_value(0), _localctx->constant_value(1))}?
@@ -38,6 +40,7 @@ string_tautology_pat
 // action: BLOCK
 // description: 布尔型注入：OR/AND 一侧为常量比较
 // profile: sql
+// start: NUMBER STRING TRUE FALSE NULL IDENT LPAREN PLUS MINUS NOT EXISTS
 boolean_injection_pat
     : const_cmp (OR | AND) comparison
     | comparison (OR | AND) const_cmp
@@ -52,6 +55,7 @@ const_cmp
 // action: BLOCK
 // description: UNION SELECT 联合查询
 // profile: sql
+// start: UNION
 union_select_pat : UNION ALL? SELECT expr_list? ;
 
 // attack: stacked_query
@@ -59,6 +63,7 @@ union_select_pat : UNION ALL? SELECT expr_list? ;
 // action: BLOCK
 // description: 堆叠查询：; 后跟 SQL 关键字
 // profile: sql
+// start: SEMI
 stacked_query_pat : SEMI (SELECT | INSERT | UPDATE | DELETE | DROP | ALTER | CREATE) ;
 
 // attack: sleep
@@ -66,6 +71,7 @@ stacked_query_pat : SEMI (SELECT | INSERT | UPDATE | DELETE | DROP | ALTER | CRE
 // action: BLOCK
 // description: 时间盲注：SLEEP()
 // profile: sql
+// start: IDENT
 sleep_pat : i=IDENT {isIdent($i, "sleep")}? LPAREN expr_list? RPAREN ;
 
 // attack: load_file
@@ -73,6 +79,7 @@ sleep_pat : i=IDENT {isIdent($i, "sleep")}? LPAREN expr_list? RPAREN ;
 // action: BLOCK
 // description: 文件读取：LOAD_FILE()
 // profile: sql
+// start: IDENT
 load_file_pat : i=IDENT {isIdent($i, "load_file")}? LPAREN expr_list? RPAREN ;
 
 // attack: benchmark
@@ -80,6 +87,7 @@ load_file_pat : i=IDENT {isIdent($i, "load_file")}? LPAREN expr_list? RPAREN ;
 // action: BLOCK
 // description: 性能消耗函数 BENCHMARK()
 // profile: sql
+// start: IDENT
 benchmark_pat : i=IDENT {isIdent($i, "benchmark")}? LPAREN expr_list? RPAREN ;
 
 // attack: pg_sleep
@@ -87,6 +95,7 @@ benchmark_pat : i=IDENT {isIdent($i, "benchmark")}? LPAREN expr_list? RPAREN ;
 // action: BLOCK
 // description: PostgreSQL 时间盲注：pg_sleep()
 // profile: sql
+// start: IDENT
 pg_sleep_pat : i=IDENT {isIdent($i, "pg_sleep")}? LPAREN expr_list? RPAREN ;
 
 // attack: subquery
@@ -94,6 +103,7 @@ pg_sleep_pat : i=IDENT {isIdent($i, "pg_sleep")}? LPAREN expr_list? RPAREN ;
 // action: ALLOW
 // description: 子查询结构检测
 // profile: sql
+// start: LPAREN
 subquery_pat : LPAREN select_stmt RPAREN ;
 
 // attack: exists_subquery
@@ -101,6 +111,7 @@ subquery_pat : LPAREN select_stmt RPAREN ;
 // action: ALLOW
 // description: EXISTS 子查询结构检测
 // profile: sql
+// start: EXISTS NOT
 exists_subquery_pat
     : EXISTS LPAREN select_stmt RPAREN
     | NOT EXISTS LPAREN select_stmt RPAREN
@@ -111,6 +122,7 @@ exists_subquery_pat
 // action: ALLOW
 // description: IN 子查询结构检测
 // profile: sql
+// start: NUMBER STRING TRUE FALSE NULL IDENT LPAREN PLUS MINUS NOT EXISTS
 in_subquery_pat : add_expr NOT? IN LPAREN select_stmt RPAREN ;
 
 // attack: like_expr
@@ -118,6 +130,7 @@ in_subquery_pat : add_expr NOT? IN LPAREN select_stmt RPAREN ;
 // action: ALLOW
 // description: LIKE 表达式结构检测
 // profile: sql
+// start: NUMBER STRING TRUE FALSE NULL IDENT LPAREN PLUS MINUS NOT EXISTS
 like_expr_pat : add_expr NOT? LIKE add_expr ;
 
 // attack: between_expr
@@ -125,6 +138,7 @@ like_expr_pat : add_expr NOT? LIKE add_expr ;
 // action: ALLOW
 // description: BETWEEN 表达式结构检测
 // profile: sql
+// start: NUMBER STRING TRUE FALSE NULL IDENT LPAREN PLUS MINUS NOT EXISTS
 between_expr_pat : add_expr NOT? BETWEEN add_expr AND add_expr ;
 
 // attack: numeric_expr
@@ -132,6 +146,7 @@ between_expr_pat : add_expr NOT? BETWEEN add_expr AND add_expr ;
 // action: ALLOW
 // description: 数值表达式比较（如 1+1=2）
 // profile: sql
+// start: NUMBER STRING TRUE FALSE NULL IDENT LPAREN PLUS MINUS NOT EXISTS
 numeric_expr_pat : arith EQ add_expr ;
 
 arith : mul_expr (add_op mul_expr)+ ;
@@ -141,6 +156,7 @@ arith : mul_expr (add_op mul_expr)+ ;
 // action: ALLOW
 // description: ORDER BY 表达式结构检测
 // profile: sql
+// start: ORDER
 order_by_expr_pat : ORDER BY expr (ASC | DESC)? ;
 
 // attack: limit_expr
@@ -148,6 +164,7 @@ order_by_expr_pat : ORDER BY expr (ASC | DESC)? ;
 // action: ALLOW
 // description: LIMIT 表达式结构检测
 // profile: sql
+// start: LIMIT
 limit_expr_pat : LIMIT expr (OFFSET expr)? ;
 
 // attack: string_concat
@@ -155,6 +172,7 @@ limit_expr_pat : LIMIT expr (OFFSET expr)? ;
 // action: ALLOW
 // description: 字符串拼接特征 ||
 // profile: sql
+// start: NUMBER STRING TRUE FALSE NULL IDENT LPAREN PLUS MINUS NOT EXISTS
 string_concat_pat : add_expr PIPE2 add_expr ;
 
 // attack: insert_fragment
@@ -162,6 +180,7 @@ string_concat_pat : add_expr PIPE2 add_expr ;
 // action: ALLOW
 // description: INSERT INTO 语句片段
 // profile: fragment
+// start: INSERT
 insert_fragment_pat : INSERT INTO? IDENT? (LPAREN expr_list RPAREN)? (VALUES LPAREN expr_list RPAREN)? ;
 
 // attack: update_fragment
@@ -169,6 +188,7 @@ insert_fragment_pat : INSERT INTO? IDENT? (LPAREN expr_list RPAREN)? (VALUES LPA
 // action: ALLOW
 // description: UPDATE ... SET 语句片段
 // profile: fragment
+// start: UPDATE
 update_fragment_pat : UPDATE IDENT (SET expr_list?)? ;
 
 // attack: delete_fragment
@@ -176,6 +196,7 @@ update_fragment_pat : UPDATE IDENT (SET expr_list?)? ;
 // action: ALLOW
 // description: DELETE FROM 语句片段
 // profile: fragment
+// start: DELETE
 delete_fragment_pat : DELETE FROM? IDENT ;
 
 // attack: select_fragment
@@ -183,6 +204,7 @@ delete_fragment_pat : DELETE FROM? IDENT ;
 // action: ALLOW
 // description: SELECT 片段
 // profile: fragment
+// start: SELECT
 select_fragment_pat : SELECT (STAR | expr_list) (FROM table_ref)? (WHERE expr)? (ORDER BY expr)? (LIMIT expr)? ;
 
 // attack: select_from_fragment
@@ -190,6 +212,7 @@ select_fragment_pat : SELECT (STAR | expr_list) (FROM table_ref)? (WHERE expr)? 
 // action: ALLOW
 // description: SELECT ... FROM 片段
 // profile: fragment
+// start: SELECT
 select_from_fragment_pat : SELECT (STAR | expr_list) FROM table_ref ;
 
 // attack: db_enumeration
@@ -197,4 +220,5 @@ select_from_fragment_pat : SELECT (STAR | expr_list) FROM table_ref ;
 // action: ALLOW
 // description: 数据库结构枚举：information_schema 元数据访问
 // profile: sql
+// start: IDENT
 db_enumeration_pat : i=IDENT {isIdent($i, "information_schema")}? ;

@@ -35,6 +35,7 @@ struct AttackMeta {
     std::string description;
     std::string profile = "sql";
     std::string matcher;   // 匹配子规则名（元数据块后的第一条语法规则）
+    std::vector<std::string> startTokens;  // 可能的起始 token（首 token 索引）
 };
 
 bool isAntlrGrammar(const std::string& path) {
@@ -83,6 +84,16 @@ std::vector<AttackMeta> parseAttacks(const std::string& path) {
         keyval(line, "action", &cur.action);
         keyval(line, "description", &cur.description);
         keyval(line, "profile", &cur.profile);
+        // // start: NUMBER IDENT ...
+        {
+            std::string prefix = "// start:";
+            size_t p = line.find(prefix);
+            if (p != std::string::npos) {
+                std::istringstream ss(line.substr(p + prefix.size()));
+                std::string tok;
+                while (ss >> tok) cur.startTokens.push_back(tok);
+            }
+        }
         // 元数据块后的第一条语法规则行 = 该攻击的匹配子规则名
         // （规则名顶格书写：单行 "name : ..." 或多行 "name" 均可）
         if (have && cur.matcher.empty()) {
@@ -187,6 +198,26 @@ std::string generateWrapper(const std::vector<AttackMeta>& attacks, const std::s
         << "    if (i < 0 || i >= " << n << ") return nullptr;\n"
         << "    return &infos[i];\n"
         << "}\n\n"
+        << "// 首 token 索引：攻击只在起始 token 匹配的位置尝试（性能优化）\n"
+        << "static bool startsOk(int k, int t) {\n"
+        << "    switch (k) {\n";
+    for (size_t i = 0; i < n; ++i) {
+        out << "        case " << i << ": return ";
+        const auto& st = attacks[i].startTokens;
+        if (st.empty()) {
+            out << "true;\n";
+            continue;
+        }
+        for (size_t j = 0; j < st.size(); ++j) {
+            if (j) out << " || ";
+            const std::string& name = st[j] == "NULL" ? "NULL_" : st[j];
+            out << "t == " << cls << "::" << name;
+        }
+        out << ";\n";
+    }
+    out << "        default: return true;\n"
+        << "    }\n"
+        << "}\n\n"
         << "extern \"C\" int rule_check_text(const char* text, int* matched,\n"
         << "                                int* startOff, int* endOff, int max_matches) {\n"
         << "    ANTLRInputStream input(text ? text : \"\");\n"
@@ -201,26 +232,28 @@ std::string generateWrapper(const std::vector<AttackMeta>& attacks, const std::s
         << "        if (t->getChannel() == Token::DEFAULT_CHANNEL) visible.push_back(t);\n"
         << "    }\n"
         << "    int count = 0;\n"
-        << "    for (int k = 0; k < " << n << " && count < max_matches; ++k) {\n"
-        << "        for (size_t i = 0; i < visible.size(); ++i) {\n"
+        << "    std::vector<bool> done(" << n << ", false);\n"
+        << "    for (size_t i = 0; i < visible.size() && count < max_matches; ++i) {\n"
+        << "        const int t = visible[i]->getType();\n"
+        << "        for (int k = 0; k < " << n << "; ++k) {\n"
+        << "            if (done[k] || !startsOk(k, t)) continue;\n"
         << "            tokens.seek(visible[i]->getTokenIndex());\n"
         << "            " << cls << " parser(&tokens);\n"
         << "            parser.removeErrorListeners();\n"
-        << "            parser.setErrorHandler(std::make_shared<BailErrorStrategy>());\n"
-        << "            try {\n"
-        << "                switch (k) {\n";
+        << "            switch (k) {\n";
     for (size_t i = 0; i < n; ++i) {
         out << "                    case " << i << ": parser." << attacks[i].matcher << "(); break;\n";
     }
-    out << "                }\n"
+    out << "            }\n"
+        << "            if (parser.getNumberOfSyntaxErrors() != 0) continue;  // 无异常控制流\n"
+        << "            done[k] = true;\n"
+        << "            {\n"
         << "                const int cur = parser.getCurrentToken()->getTokenIndex();\n"
         << "                matched[count] = k;\n"
         << "                startOff[count] = visible[i]->getStartIndex();\n"
         << "                endOff[count] = cur > 0 ? tokens.get(cur - 1)->getStopIndex()"
         << " : startOff[count];\n"
         << "                ++count;\n"
-        << "                break;\n"
-        << "            } catch (...) {\n"
         << "            }\n"
         << "        }\n"
         << "    }\n"

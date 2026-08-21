@@ -10,4 +10,5 @@ options { tokenVocab = SQLTokens; }
 
 import RuleSQL;
 
+// start: LT
 pattern : LT i=IDENT {isIdent($i, "script")}? ;
