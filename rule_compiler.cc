@@ -240,6 +240,16 @@ std::string generateWrapper(const std::vector<AttackMeta>& attacks, const std::s
         << "    constexpr int kMaxMillis = 5;\n"
         << "    int attempts = 0;\n"
         << "    const auto t0 = std::chrono::steady_clock::now();\n"
+        << "    // 命中终止：裁决只取决于是否命中 BLOCK 规则（engine.cc Verdict）。\n"
+        << "    // 一旦命中 BLOCK，后续匹配不可能再改变裁决，直接结束整个过程，\n"
+        << "    // 不再继续收集多余的 ALLOW 检测结果。仅 ALLOW 命中时仍需扫描到\n"
+        << "    // 底，避免把后面才出现的 BLOCK 规则漏掉（如 1+1=2 UNION SELECT）。\n"
+        << "    static const bool kBlocking[" << n << "] = {";
+    for (size_t i = 0; i < n; ++i) {
+        out << (attacks[i].action == "BLOCK" ? "true" : "false")
+            << (i + 1 < n ? "," : "");
+    }
+    out << "};\n"
         << "    std::vector<bool> done(" << n << ", false);\n"
         << "    for (size_t i = 0; i < visible.size() && count < max_matches; ++i) {\n"
         << "        const int t = visible[i]->getType();\n"
@@ -274,6 +284,7 @@ std::string generateWrapper(const std::vector<AttackMeta>& attacks, const std::s
         << "                endOff[count] = cur > 0 ? tokens.get(cur - 1)->getStopIndex()"
         << " : startOff[count];\n"
         << "                ++count;\n"
+        << "                if (kBlocking[k]) return count;  // 已命中拦截规则，结束匹配\n"
         << "            }\n"
         << "        }\n"
         << "    }\n"

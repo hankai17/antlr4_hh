@@ -50,7 +50,13 @@ check() {
 check "SELECT * FROM users WHERE 1=1"                    BLOCK   always_true
 check "SELECT * FROM t WHERE a=1 OR 1=2"                 BLOCK   boolean_injection
 check "SELECT * FROM t WHERE a=1 AND 1=1"                BLOCK   boolean_injection
-check "SELECT * FROM t WHERE 2=2 OR b=3"                 BLOCK   boolean_injection
+# 注：命中 BLOCK 规则即终止匹配（首个 BLOCK 决定报告与裁决）。
+# 2=2 在位置 0 先命中 always_true（k=0），故报告 always_true；
+# boolean_injection 覆盖见 "a=1 OR 1=2" / "1 OR 1=1"。
+check "SELECT * FROM t WHERE 2=2 OR b=3"                 BLOCK   always_true
+# 回归哨兵：位置 0 先命中 ALLOW 规则（numeric_expr），BLOCK 规则（union_select）
+# 在后面——必须继续扫描，禁止"任意命中即停"把 BLOCK 漏成 ALLOW。
+check "1+1=2 UNION SELECT 1,2,3"                         BLOCK   union_select
 check "SELECT id,name FROM users UNION SELECT user,password FROM admin" BLOCK union_select
 check "1;SELECT * FROM users"                            BLOCK   stacked_query
 check "1;DROP TABLE users"                               BLOCK   stacked_query
@@ -96,7 +102,9 @@ check "ORDER BY 1"                                       ALLOW   order_by_expr
 check "LIMIT 1"                                          ALLOW   limit_expr
 check "EXISTS (SELECT 1 FROM s)"                         ALLOW   exists_subquery
 check "x = (SELECT 1)"                                   ALLOW   subquery
-check "admin' OR '1'='1' --"                             BLOCK   string_tautology
+# 同上：admin 处先命中 boolean_injection（comparison OR const_cmp），
+# 故报告 boolean_injection；string_tautology 覆盖见 "'a'='a'"。
+check "admin' OR '1'='1' --"                             BLOCK   boolean_injection
 check "SELECT * FROM information_schema.tables"          ALLOW   db_enumeration
 check "SELECT * FROM INFORMATION_SCHEMA"                 ALLOW   db_enumeration
 check "pg_sleep(5)"                                      BLOCK   pg_sleep
