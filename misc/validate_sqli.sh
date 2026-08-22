@@ -60,6 +60,11 @@ check "SELECT BENCHMARK(10000000, MD5('x'))"             BLOCK   benchmark
 check "SELECT pg_sleep(5)"                               BLOCK   pg_sleep
 check "SELECT * FROM t WHERE 'a'='a'"                    BLOCK   string_tautology
 check "GET /q?x=<script>alert(1)</script>"               BLOCK   script_tag
+# 对抗性滑窗重解析：大量"看似合法起点"（1=1 重复 200 组）。
+# 语义上仍应命中 always_true -> BLOCK；同时是 O(n^2) 最坏路径的回归哨兵
+# （1=1 x 200 约为 100ms 量级，若误引入更慢的错误恢复会明显放大）。
+adv_payload=$(printf '1=1 %.0s' $(seq 1 200))
+check "$adv_payload" BLOCK always_true
 
 # ------------------------------------------------------------
 # 正样本：检测型规则（命中但按 action 放行 / 解析失败）
